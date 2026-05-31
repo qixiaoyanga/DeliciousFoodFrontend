@@ -1,0 +1,127 @@
+// API路径常量定义
+// 用于统一管理不同端的API路径前缀
+
+// 用户端API前缀
+export const API_PREFIX_CUSTOMER = '/customer'
+
+// 商家端API前缀
+export const API_PREFIX_MERCHANT = '/merchant'
+
+// 管理端API前缀
+export const API_PREFIX_ADMIN = '/admin'
+
+// 公共API前缀（不需要认证的）
+export const API_PREFIX_PUBLIC = '/public'
+
+// ==================== 用户端API路径 ====================
+
+// 认证相关
+export const CUSTOMER_API = {
+  // 认证
+  PUBLIC_KEY: `${API_PREFIX_PUBLIC}/public-key`,
+  LOGIN: `${API_PREFIX_CUSTOMER}/login`,
+  REGISTER: `${API_PREFIX_CUSTOMER}/register`,
+  REFRESH: `${API_PREFIX_CUSTOMER}/refresh`,
+  LOGOUT: `${API_PREFIX_CUSTOMER}/logout`,
+
+  // 用户
+  USER_CURRENT: `${API_PREFIX_CUSTOMER}/user/current`,
+  USER_INFO: `${API_PREFIX_CUSTOMER}/user/info`,
+  USER_UPDATE: `${API_PREFIX_CUSTOMER}/user/update`,
+
+  // 店铺
+  SHOP_LIST: `${API_PREFIX_CUSTOMER}/shop/list`,
+  SHOP_DETAIL: (id: number) => `${API_PREFIX_CUSTOMER}/shop/${id}`,
+  SHOP_SEARCH: `${API_PREFIX_CUSTOMER}/shop/search`,
+  SHOP_DISHES: (id: number) => `${API_PREFIX_CUSTOMER}/shop/${id}/dishes`,
+
+  // 菜品
+  DISH_DETAIL: (id: number) => `${API_PREFIX_CUSTOMER}/dish/${id}`,
+  DISH_RECOMMEND: `${API_PREFIX_CUSTOMER}/dish/recommend`,
+  DISH_CATEGORY: (id: number) => `${API_PREFIX_CUSTOMER}/dish/category/${id}`,
+
+  // 分类
+  CATEGORY_LIST: `${API_PREFIX_CUSTOMER}/category/list`,
+
+  // 轮播图
+  BANNER_LIST: `${API_PREFIX_CUSTOMER}/banner/list`,
+
+  // 订单
+  ORDER_CREATE: `${API_PREFIX_CUSTOMER}/order/create`,
+  ORDER_LIST: `${API_PREFIX_CUSTOMER}/order/list`,
+  ORDER_DETAIL: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}`,
+  ORDER_CANCEL: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/cancel`,
+  ORDER_CONFIRM: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/confirm`,
+  ORDER_PAY: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/pay`,
+
+  // 购物车
+  CART_GET: `${API_PREFIX_CUSTOMER}/cart`,
+  CART_ADD: `${API_PREFIX_CUSTOMER}/cart/add`,
+  CART_UPDATE: `${API_PREFIX_CUSTOMER}/cart/update`,
+  CART_REMOVE: `${API_PREFIX_CUSTOMER}/cart/remove`,
+  CART_CLEAR: `${API_PREFIX_CUSTOMER}/cart/clear`
+} as const
+
+// ==================== 商家端API路径（预留） ====================
+
+export const MERCHANT_API = {
+  // 认证
+  MERCHANT_LOGIN: `${API_PREFIX_MERCHANT}/login`,
+  MERCHANT_REGISTER: `${API_PREFIX_MERCHANT}/register`,
+  MERCHANT_REFRESH: `${API_PREFIX_MERCHANT}/refresh`,
+  MERCHANT_LOGOUT: `${API_PREFIX_MERCHANT}/logout`,
+
+  // 商家信息
+  MERCHANT_INFO: `${API_PREFIX_MERCHANT}/merchant/info`,
+  MERCHANT_UPDATE: `${API_PREFIX_MERCHANT}/merchant/update`,
+
+  // 店铺管理
+  SHOP_MANAGE_INFO: `${API_PREFIX_MERCHANT}/shop/info`,
+  SHOP_MANAGE_UPDATE: `${API_PREFIX_MERCHANT}/shop/update`,
+
+  // 菜品管理
+  DISH_MANAGE_LIST: `${API_PREFIX_MERCHANT}/dish/list`,
+  DISH_MANAGE_ADD: `${API_PREFIX_MERCHANT}/dish/add`,
+  DISH_MANAGE_UPDATE: (id: number) => `${API_PREFIX_MERCHANT}/dish/${id}`,
+  DISH_MANAGE_DELETE: (id: number) => `${API_PREFIX_MERCHANT}/dish/${id}`,
+  DISH_MANAGE_STATUS: (id: number) => `${API_PREFIX_MERCHANT}/dish/${id}/status`,
+
+  // 订单管理
+  ORDER_MANAGE_LIST: `${API_PREFIX_MERCHANT}/order/list`,
+  ORDER_MANAGE_DETAIL: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}`,
+  ORDER_MANAGE_ACCEPT: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}/accept`,
+  ORDER_MANAGE_REJECT: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}/reject`,
+  ORDER_MANAGE_COMPLETE: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}/complete`
+} as const
+
+// ==================== 管理端API路径（预留） ====================
+
+export const ADMIN_API = {
+  // 认证
+  ADMIN_LOGIN: `${API_PREFIX_ADMIN}/login`,
+
+  // 店铺管理
+  SHOP_ADMIN_LIST: `${API_PREFIX_ADMIN}/shop/list`,
+  SHOP_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}`,
+  SHOP_ADMIN_STATUS: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}/status`,
+
+  // 用户管理
+  USER_ADMIN_LIST: `${API_PREFIX_ADMIN}/user/list`,
+  USER_ADMIN_STATUS: (id: number) => `${API_PREFIX_ADMIN}/user/${id}/status`,
+
+  // 订单管理
+  ORDER_ADMIN_LIST: `${API_PREFIX_ADMIN}/order/list`,
+  ORDER_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/order/${id}`
+} as const
+
+export default {
+  CUSTOMER: CUSTOMER_API,
+  MERCHANT: MERCHANT_API,
+  ADMIN: ADMIN_API,
+  PREFIX: {
+    CUSTOMER: API_PREFIX_CUSTOMER,
+    MERCHANT: API_PREFIX_MERCHANT,
+    ADMIN: API_PREFIX_ADMIN,
+    PUBLIC: API_PREFIX_PUBLIC
+  }
+}
