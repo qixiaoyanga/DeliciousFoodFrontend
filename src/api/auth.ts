@@ -14,7 +14,14 @@ export interface LoginParams {
 
 export interface LoginResult {
   accessToken: string
-  user: User
+  refreshToken?: string
+  uid: string
+  username: string
+  phone: string
+  email?: string
+  image?: string
+  gender?: number
+  createTime?: string
 }
 
 export interface RegisterParams {
@@ -86,10 +93,19 @@ export const authApi = {
       }
 
       const result = await http.post<LoginResult>(CUSTOMER_API.LOGIN, loginData)
-      tokenManager.setTokens(result.accessToken)
+      const user: User = {
+        uid: result.uid,
+        username: result.username,
+        phone: result.phone,
+        email: result.email,
+        image: result.image,
+        gender: result.gender,
+        createTime: result.createTime
+      }
+      // 存储 accessToken 和 refreshToken（refreshToken 会自动存入 cookie）
+      tokenManager.setTokens(result.accessToken, user, result.refreshToken)
       return true
     } catch (error: any) {
-      console.error('登录失败:', error)
       throw new Error(error.message || '登录失败，请重试')
     }
   }

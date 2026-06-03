@@ -36,13 +36,13 @@ const requestInterceptors: Array<(config: RequestConfig) => RequestConfig> = [
     return config
   },
 
-  // 2. 添加认证Token
+  // 2. 添加认证Token（accessToken在header，refreshToken由HttpOnly Cookie自动携带）
   (config: RequestConfig): RequestConfig => {
-    const token = getAccessToken()
-    if (token) {
+    const accessToken = getAccessToken()
+    if (accessToken) {
       config.headers = {
         ...config.headers,
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${accessToken}`
       }
     }
     return config
@@ -84,8 +84,6 @@ const requestInterceptors: Array<(config: RequestConfig) => RequestConfig> = [
 const responseInterceptors: Array<(response: any, config: RequestConfig) => any> = [
   // 1. 解析JSON响应，包括HTTP错误状态
   async (response: Response, config: RequestConfig): Promise<Result> => {
-    console.log('[响应拦截器1] HTTP状态码:', response.status, response.ok)
-
     // 处理204 No Content
     if (response.status === 204) {
       return {
@@ -97,11 +95,9 @@ const responseInterceptors: Array<(response: any, config: RequestConfig) => any>
     }
 
     const contentType = response.headers.get('content-type') || ''
-    console.log('[响应拦截器1] Content-Type:', contentType)
 
     if (contentType.includes('application/json')) {
       const result = await response.json()
-      console.log('[响应拦截器1] 解析结果:', result)
       // 如果是HTTP错误状态但返回了JSON，就直接返回
       return result
     }
@@ -133,8 +129,6 @@ const responseInterceptors: Array<(response: any, config: RequestConfig) => any>
 
   // 3. 处理业务错误
   (result: Result, config: RequestConfig): Result => {
-    console.log('[响应拦截器3] 接收到的result:', result)
-
     // 清理请求队列
     const requestKey = generateRequestKey(config)
     pendingRequests.delete(requestKey)
@@ -142,13 +136,11 @@ const responseInterceptors: Array<(response: any, config: RequestConfig) => any>
     // 非200状态码，提示异常信息
     if (result.code !== 200) {
       const message = result.message || '请求失败'
-      console.log('[响应拦截器3] 检测到错误code:', result.code, '准备使用message:', message)
       if (config.showError !== false) {
         toast.error(message)
       }
       const error = new Error(message)
       ;(error as any).code = result.code
-      console.log('[响应拦截器3] throw error:', error)
       throw error
     }
 
@@ -167,12 +159,8 @@ const errorInterceptors: Array<(error: any, config: RequestConfig) => any> = [
 
   // 2. 处理网络错误等非HTTP响应错误 - 只在没有message时才覆盖
   (error: any, config: RequestConfig): any => {
-    console.log('[错误拦截器2] 接收到的error:', error)
-    console.log('[错误拦截器2] error.message:', error.message)
-
     // 如果已经有 message 了，就不覆盖
     if (error.message) {
-      console.log('[错误拦截器2] 已有message，不覆盖')
       return error
     }
 
@@ -279,26 +267,26 @@ const request = async <T = any>(config: RequestConfig): Promise<T> => {
     }
   }
 
-  // 构建请求配置
-  const fetchOptions: RequestInit = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers
-    },
-    credentials: 'include' // 携带Cookie
-  }
-
-  // 添加请求体
-  if (data && method !== 'GET') {
-    fetchOptions.body = JSON.stringify(data)
-  }
-
   // 执行请求拦截器
   const finalConfig = executeInterceptorsSync<RequestConfig>(
     requestInterceptors,
     config
   )
+
+  // 构建请求配置（使用拦截器处理后的配置）
+  const fetchOptions: RequestInit = {
+    method: finalConfig.method || method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...finalConfig.headers
+    },
+    credentials: 'include' // 携带Cookie
+  }
+
+  // 添加请求体
+  if (finalConfig.data && (finalConfig.method || method) !== 'GET') {
+    fetchOptions.body = JSON.stringify(finalConfig.data)
+  }
 
   // 超时处理
   const controller = new AbortController()
@@ -368,10 +356,8 @@ const request = async <T = any>(config: RequestConfig): Promise<T> => {
 
     return result as T
   } catch (error) {
-    console.log('[request catch] 捕获到error:', error)
     // 执行错误拦截器
     const finalError = executeInterceptorsSync(errorInterceptors, error, finalConfig)
-    console.log('[request catch] finalError:', finalError)
     throw finalError
   }
 }

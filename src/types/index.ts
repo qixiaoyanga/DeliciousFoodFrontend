@@ -45,10 +45,13 @@ export interface NavItem {
 }
 
 export interface User {
-  id: number
+  uid: string
+  username: string
   phone: string
-  nickname?: string
-  avatar?: string
+  email?: string
+  image?: string
+  gender?: number
+  createTime?: string
 }
 
 // 统一返回结果类（与后端对应）

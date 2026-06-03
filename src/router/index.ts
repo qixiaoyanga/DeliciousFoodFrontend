@@ -9,12 +9,6 @@ const routes: RouteRecordRaw[] = [
     meta: { showNavFooter: false }
   },
   {
-    path: '/test-api',
-    name: 'test-api',
-    component: () => import('@/views/TestApi.vue'),
-    meta: { showNavFooter: false }
-  },
-  {
     path: '/',
     name: 'home',
     component: () => import('@/views/HomeView.vue'),

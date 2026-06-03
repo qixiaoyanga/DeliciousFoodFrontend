@@ -1,19 +1,16 @@
-// Token管理模块 - 双Token机制
+// Token管理模块 - accessToken内存存储 + refreshToken HttpOnly Cookie（后端管理）
 import { http } from './request'
 import { generateDeviceFingerprint } from './crypto'
 import { toast } from './toast'
 import { CUSTOMER_API } from '@/api/paths'
-
-// Token存储键名
-const ACCESS_TOKEN_KEY = import.meta.env.VITE_ACCESS_TOKEN_KEY || 'access_token'
-const REFRESH_TOKEN_KEY = import.meta.env.VITE_REFRESH_TOKEN_KEY || 'refresh_token'
-const TOKEN_EXPIRE_KEY = import.meta.env.VITE_TOKEN_EXPIRE_KEY || 'token_expire'
+import type { User } from '@/types'
 
 // Token状态
 interface TokenState {
   accessToken: string | null
   refreshToken: string | null
   expireTime: number | null
+  user: User | null
 }
 
 // 刷新锁（防止并发刷新）
@@ -36,51 +33,30 @@ class TokenManager {
   private accessToken: string | null = null
   private refreshToken: string | null = null
   private expireTime: number | null = null
+  private user: User | null = null
 
-  constructor() {
-    // 从localStorage恢复token
-    this.loadFromStorage()
-  }
-
-  // 从localStorage加载token
-  private loadFromStorage() {
-    try {
-      this.accessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
-      this.refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
-      const expireStr = localStorage.getItem(TOKEN_EXPIRE_KEY)
-      this.expireTime = expireStr ? parseInt(expireStr) : null
-    } catch (error) {
-      console.error('加载Token失败:', error)
-    }
-  }
-
-  // 保存到localStorage
-  private saveToStorage() {
-    try {
-      if (this.accessToken) {
-        localStorage.setItem(ACCESS_TOKEN_KEY, this.accessToken)
-      }
-      if (this.refreshToken) {
-        localStorage.setItem(REFRESH_TOKEN_KEY, this.refreshToken)
-      }
-      if (this.expireTime) {
-        localStorage.setItem(TOKEN_EXPIRE_KEY, this.expireTime.toString())
-      }
-    } catch (error) {
-      console.error('保存Token失败:', error)
-    }
-  }
-
-  // 设置Token
-  setTokens(accessToken: string, refreshToken?: string, expireTime?: number) {
+  // 设置Token和用户信息（accessToken内存，refreshToken由后端通过HttpOnly Cookie管理）
+  setTokens(accessToken: string, user?: User, refreshToken?: string, expireTime?: number) {
     this.accessToken = accessToken
+    if (user) {
+      this.user = user
+    }
     if (refreshToken) {
       this.refreshToken = refreshToken
     }
     if (expireTime) {
       this.expireTime = expireTime
     }
-    this.saveToStorage()
+  }
+
+  // 获取用户信息
+  getUser(): User | null {
+    return this.user
+  }
+
+  // 设置用户信息
+  setUser(user: User) {
+    this.user = user
   }
 
   // 获取AccessToken
@@ -106,23 +82,19 @@ class TokenManager {
     if (!this.expireTime) {
       return false
     }
-    // 提前5分钟刷新
     return Date.now() >= this.expireTime - 5 * 60 * 1000
   }
 
-  // 清除Token
+  // 清除Token（内存）- HttpOnly Cookie由后端在logout时清除
   clearTokens() {
     this.accessToken = null
     this.refreshToken = null
     this.expireTime = null
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
-    localStorage.removeItem(TOKEN_EXPIRE_KEY)
+    this.user = null
   }
 
   // 刷新Token
   async doRefreshToken(): Promise<string | null> {
-    // 如果已经在刷新中，等待刷新完成
     if (isRefreshing) {
       return new Promise((resolve) => {
         subscribeTokenRefresh((token: string) => {
@@ -139,7 +111,6 @@ class TokenManager {
     isRefreshing = true
 
     try {
-      // 调用刷新接口
       const result = await http.post<{
         accessToken: string
         refreshToken?: string
@@ -148,13 +119,12 @@ class TokenManager {
       })
 
       if (result.accessToken) {
-        // 更新Token
         this.setTokens(
           result.accessToken,
+          undefined,
           result.refreshToken || this.refreshToken || undefined
         )
 
-        // 通知所有等待的请求
         publishTokenRefresh(result.accessToken)
 
         return result.accessToken
@@ -162,7 +132,6 @@ class TokenManager {
 
       return null
     } catch (error) {
-      // 刷新失败，清除Token
       this.clearTokens()
       toast.error('会话已过期，请重新登录')
       window.location.href = '/login'
@@ -182,7 +151,8 @@ class TokenManager {
     return {
       accessToken: this.accessToken,
       refreshToken: this.refreshToken,
-      expireTime: this.expireTime
+      expireTime: this.expireTime,
+      user: this.user
     }
   }
 }
@@ -192,7 +162,46 @@ export const tokenManager = new TokenManager()
 
 // 便捷方法
 export const getAccessToken = () => tokenManager.getAccessToken()
-export const setTokens = (accessToken: string, refreshToken?: string) =>
-  tokenManager.setTokens(accessToken, refreshToken)
+export const getRefreshToken = () => tokenManager.getRefreshToken()
+export const getUser = () => tokenManager.getUser()
+export const setUser = (user: User) => tokenManager.setUser(user)
+export const setTokens = (accessToken: string, user?: User, refreshToken?: string) =>
+  tokenManager.setTokens(accessToken, user, refreshToken)
 export const clearTokens = () => tokenManager.clearTokens()
 export const isTokenExpired = () => tokenManager.isTokenExpired()
+
+// 自动登录 - 通过refreshToken刷新获取新的accessToken
+export const autoLogin = async (): Promise<boolean> => {
+  try {
+    const result = await http.post<{
+      accessToken: string
+      refreshToken?: string
+      uid: string
+      username: string
+      phone: string
+      email?: string
+      image?: string
+      gender?: number
+      createTime?: string
+    }>(CUSTOMER_API.REFRESH, {
+      fingerprint: generateDeviceFingerprint()
+    })
+
+    if (result.accessToken) {
+      const user: User = {
+        uid: result.uid,
+        username: result.username,
+        phone: result.phone,
+        email: result.email,
+        image: result.image,
+        gender: result.gender,
+        createTime: result.createTime
+      }
+      tokenManager.setTokens(result.accessToken, user, result.refreshToken)
+      return true
+    }
+    return false
+  } catch (error) {
+    return false
+  }
+}
