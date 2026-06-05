@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import type { CarouselItem } from '@/types'
 
+const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious'
+
 interface Props {
   items: CarouselItem[]
   interval?: number
@@ -12,6 +14,13 @@ const props = withDefaults(defineProps<Props>(), {
   interval: 5000,
   height: '400px'
 })
+
+const getImageUrl = (imagePath: string): string => {
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  return `${SERVER_BASE_URL}/${imagePath.replace(/^\//, '')}`
+}
 
 const emit = defineEmits<{
   (e: 'change', index: number): void
@@ -83,7 +92,7 @@ onUnmounted(() => {
         class="carousel-slide"
         :class="{ active: index === currentIndex }"
       >
-        <img :src="item.image" :alt="item.title" class="carousel-image" />
+        <img :src="getImageUrl(item.image)" :alt="item.title" class="carousel-image" />
         <div class="carousel-overlay">
           <div class="carousel-content">
             <h2 class="carousel-title">{{ item.title }}</h2>

@@ -61,8 +61,14 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
+    const token = tokenManager.getAccessToken()
     try {
-      await http.post(CUSTOMER_API.LOGOUT)
+      await http.post(CUSTOMER_API.LOGOUT, {}, {
+        headers: {
+          'token': token || ''
+        },
+        skipAuth: true
+      })
     } finally {
       tokenManager.clearTokens()
     }

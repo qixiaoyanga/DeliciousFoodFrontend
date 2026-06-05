@@ -1,17 +1,39 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Loading from '@/components/common/Loading.vue'
 import DishCard from '@/components/dish/DishCard.vue'
+import DishModal from '@/components/dish/DishModal.vue'
 import { shopData, dishData } from '@/data/mockData'
 import { shopDetailApi, shopDishApi } from '@/api'
-import type { Shop, Dish } from '@/types'
+import type { Shop, Dish, DishCategory } from '@/types'
+
+const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious'
+
+const getImageUrl = (imagePath: string): string => {
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  return `${SERVER_BASE_URL}/${imagePath.replace(/^\//, '')}`
+}
 
 const route = useRoute()
 const shopId = ref(parseInt(route.params.id as string))
 const shop = ref<Shop | null | undefined>(null)
 const dishes = ref<Dish[]>([])
 const isLoading = ref(true)
+const showDishModal = ref(false)
+const selectedDish = ref<Dish | null>(null)
+
+const handleDishClick = (dish: Dish) => {
+  selectedDish.value = dish
+  showDishModal.value = true
+}
+
+const handleCloseModal = () => {
+  showDishModal.value = false
+  selectedDish.value = null
+}
 
 const loadShopDetail = async (id: number): Promise<Shop> => {
   try {
@@ -48,6 +70,29 @@ const initData = async () => {
   }
 }
 
+const groupedDishes = computed(() => {
+  const groups: Record<number, { category: DishCategory | undefined; dishes: Dish[] }> = {}
+
+  dishes.value.forEach(dish => {
+    const categoryId = dish.categoryId
+    if (!groups[categoryId]) {
+      groups[categoryId] = {
+        category: dish.category,
+        dishes: []
+      }
+    }
+    groups[categoryId].dishes.push(dish)
+  })
+
+  const sortedGroups = Object.values(groups).sort((a, b) => {
+    const sortA = a.category?.sort ?? 999
+    const sortB = b.category?.sort ?? 999
+    return sortA - sortB
+  })
+
+  return sortedGroups
+})
+
 onMounted(() => {
   initData()
 })
@@ -60,7 +105,7 @@ onMounted(() => {
     <div v-else-if="shop" class="shop-detail">
       <section class="shop-hero">
         <div class="hero-image">
-          <img :src="shop.image" :alt="shop.name" />
+          <img :src="getImageUrl(shop.logo)" :alt="shop.name" />
           <div class="hero-overlay"></div>
         </div>
         <div class="hero-content container">
@@ -69,16 +114,16 @@ onMounted(() => {
 
           <div class="shop-stats">
             <div class="stat-item">
-              <span class="stat-value">{{ shop.rating }}</span>
+              <span class="stat-value">{{ shop.grade.toFixed(1) }}</span>
               <span class="stat-label">评分</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ shop.sales }}</span>
+              <span class="stat-value">{{ shop.monthlySales }}</span>
               <span class="stat-label">月售</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ shop.deliveryTime }}</span>
-              <span class="stat-label">配送时间</span>
+              <span class="stat-value">{{ shop.businessHours }}</span>
+              <span class="stat-label">营业时间</span>
             </div>
           </div>
         </div>
@@ -90,19 +135,19 @@ onMounted(() => {
             <div class="info-item">
               <span class="info-icon">💰</span>
               <span class="info-label">起送价</span>
-              <span class="info-value">¥{{ shop.minimumOrder }}</span>
+              <span class="info-value">¥{{ shop.minOrderAmount.toFixed(2) }}</span>
             </div>
             <div class="info-item">
               <span class="info-icon">📦</span>
               <span class="info-label">配送费</span>
-              <span class="info-value" :class="{ free: shop.deliveryFee === 0 }">
-                {{ shop.deliveryFee === 0 ? '免费' : `¥${shop.deliveryFee}` }}
+              <span class="info-value" :class="{ free: shop.delivery === 0 }">
+                {{ shop.delivery === 0 ? '免费' : `¥${shop.delivery.toFixed(2)}` }}
               </span>
             </div>
             <div class="info-item">
               <span class="info-icon">⏱️</span>
-              <span class="info-label">平均配送</span>
-              <span class="info-value">{{ shop.deliveryTime }}</span>
+              <span class="info-label">营业时间</span>
+              <span class="info-value">{{ shop.businessHours }}</span>
             </div>
           </div>
         </div>
@@ -110,13 +155,22 @@ onMounted(() => {
 
       <section class="dishes-section">
         <div class="container">
-          <h2 class="section-title">热门菜品</h2>
-          <div class="dishes-grid">
-            <DishCard
-              v-for="dish in dishes"
-              :key="dish.id"
-              :dish="dish"
-            />
+          <div v-for="group in groupedDishes" :key="group.category?.id || 'no-category'" class="category-group">
+            <div class="category-header">
+              <h3 class="category-name">
+                <span class="category-icon">🍽️</span>
+                {{ group.category?.name || '未分类' }}
+              </h3>
+              <span class="category-count">{{ group.dishes.length }} 道菜</span>
+            </div>
+            <div class="dishes-grid">
+              <DishCard
+                v-for="dish in group.dishes"
+                :key="dish.id"
+                :dish="dish"
+                @click="handleDishClick"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -127,6 +181,12 @@ onMounted(() => {
       <h2>店铺不存在</h2>
       <p>抱歉，您访问的店铺不存在</p>
     </div>
+
+    <DishModal
+      :dish="selectedDish"
+      :visible="showDishModal"
+      @close="handleCloseModal"
+    />
   </div>
 </template>
 
@@ -250,13 +310,38 @@ onMounted(() => {
   padding: 40px 0;
 }
 
-.section-title {
-  font-size: 28px;
+.category-group {
+  margin-bottom: 40px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.category-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 24px;
-  padding-left: 16px;
-  border-left: 6px solid var(--primary-color);
+}
+
+.category-icon {
+  font-size: 20px;
+}
+
+.category-count {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: rgba(74, 55, 40, 0.06);
+  padding: 4px 12px;
+  border-radius: 20px;
 }
 
 .dishes-grid {

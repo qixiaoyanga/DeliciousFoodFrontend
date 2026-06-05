@@ -6,15 +6,40 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const emit = defineEmits<{
+  (e: 'click', dish: Dish): void
+}>()
+
+const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious'
+
+const getImageUrl = (imagePath: string): string => {
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  return `${SERVER_BASE_URL}/${imagePath.replace(/^\//, '')}`
+}
+
+const hasDiscount = (dish: Dish): boolean => {
+  return (dish.price ?? 0) > (dish.salesPrice ?? 0)
+}
+
+const formatPrice = (price: number | null | undefined): string => {
+  return (price ?? 0).toFixed(2)
+}
+
+const handleClick = (dish: Dish) => {
+  emit('click', dish)
+}
 </script>
 
 <template>
-  <div class="dish-card">
+  <div class="dish-card" @click="handleClick(dish)">
     <div class="dish-image-wrapper">
-      <img :src="dish.image" :alt="dish.name" class="dish-image" />
+      <img :src="getImageUrl(dish.image)" :alt="dish.name" class="dish-image" />
       <div class="dish-badges">
-        <span class="badge hot" v-if="dish.sales > 2000">热销</span>
-        <span class="badge discount" v-if="dish.originalPrice">特惠</span>
+        <span class="badge hot" v-if="dish.monthSales > 200">热销</span>
+        <span class="badge discount" v-if="hasDiscount(dish)">特惠</span>
       </div>
     </div>
 
@@ -23,21 +48,16 @@ defineProps<Props>()
       <p class="dish-description" v-if="dish.description">
         {{ dish.description }}
       </p>
-      
+
       <div class="dish-meta">
-        <div class="dish-rating">
-          <span class="rating-value">{{ dish.rating }}</span>
-          <span class="rating-star">⭐</span>
-        </div>
-        <span class="dish-sales">月售{{ dish.sales }}</span>
+        <span class="dish-sales">月售{{ dish.monthSales }}</span>
       </div>
 
       <div class="dish-price">
-        <span class="current-price">¥{{ dish.price }}</span>
-        <span class="original-price" v-if="dish.originalPrice">
-          ¥{{ dish.originalPrice }}
+        <span class="current-price">¥{{ formatPrice(dish.salesPrice) }}</span>
+        <span class="original-price" v-if="hasDiscount(dish)">
+          ¥{{ formatPrice(dish.price) }}
         </span>
-        <button class="add-btn">+</button>
       </div>
     </div>
   </div>
@@ -173,31 +193,6 @@ defineProps<Props>()
   font-size: 13px;
   color: var(--text-muted);
   text-decoration: line-through;
-}
-
-.add-btn {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-  background: var(--primary-color);
-  color: white;
-  border-radius: 50%;
-  font-size: 20px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  line-height: 1;
-}
-
-.add-btn:hover {
-  background: var(--primary-dark);
-  transform: scale(1.1);
-}
-
-.add-btn:active {
-  transform: scale(0.95);
 }
 
 @media screen and (max-width: 768px) {

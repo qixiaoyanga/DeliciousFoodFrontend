@@ -3,9 +3,11 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getUser } from '@/utils/token'
 import { authApi } from '@/api/auth'
+import { useCart } from '@/store/cart'
 
 const route = useRoute()
 const router = useRouter()
+const cart = useCart()
 
 // 后端服务器基础URL
 const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious'
@@ -16,6 +18,7 @@ let closeTimer: ReturnType<typeof setTimeout> | null = null
 
 const navItems = [
   { path: '/', name: '首页', icon: '🏠' },
+  { path: '/cart', name: '购物车', icon: '🛒' },
   { path: '/order', name: '我的订单', icon: '📋' }
 ]
 
@@ -102,6 +105,12 @@ const closeDropdown = () => {
         >
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-text">{{ item.name }}</span>
+          <span 
+            v-if="item.path === '/cart' && cart.totalCount.value > 0" 
+            class="cart-badge"
+          >
+            {{ cart.totalCount.value }}
+          </span>
         </router-link>
       </nav>
 
@@ -217,6 +226,35 @@ const closeDropdown = () => {
 
 .nav-icon {
   font-size: 18px;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--danger-color);
+  color: white;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: badgeIn 0.2s ease-out;
+}
+
+@keyframes badgeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .user-dropdown {

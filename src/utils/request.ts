@@ -15,7 +15,9 @@ const ErrorCodes = {
   REPLAY_ATTACK: 401003,
   REQUEST_EXPIRED: 401004,
   DEVICE_ANOMALY: 401005,
-  TOKEN_BLACKLISTED: 401006
+  TOKEN_BLACKLISTED: 401006,
+  TOKEN_NEED_REFRESH: 400000,
+  NEED_LOGIN: 402000
 }
 
 // 请求队列管理
@@ -29,26 +31,23 @@ const generateRequestKey = (config: RequestConfig): string => {
 
 // 请求拦截器链
 const requestInterceptors: Array<(config: RequestConfig) => RequestConfig> = [
-  // 1. 添加时间戳防缓存
   (config: RequestConfig): RequestConfig => {
     const timestamp = Date.now()
     config.params = { ...config.params, _t: timestamp }
     return config
   },
 
-  // 2. 添加认证Token（accessToken在header，refreshToken由HttpOnly Cookie自动携带）
   (config: RequestConfig): RequestConfig => {
     const accessToken = getAccessToken()
-    if (accessToken) {
+    if (accessToken && !config.headers?.token) {
       config.headers = {
         ...config.headers,
-        'Authorization': `Bearer ${accessToken}`
+        'token': accessToken
       }
     }
     return config
   },
 
-  // 3. 添加设备指纹
   (config: RequestConfig): RequestConfig => {
     config.headers = {
       ...config.headers,
@@ -57,7 +56,6 @@ const requestInterceptors: Array<(config: RequestConfig) => RequestConfig> = [
     return config
   },
 
-  // 4. 添加请求ID（防重放）
   (config: RequestConfig): RequestConfig => {
     config.headers = {
       ...config.headers,
@@ -66,7 +64,6 @@ const requestInterceptors: Array<(config: RequestConfig) => RequestConfig> = [
     return config
   },
 
-  // 5. 取消重复请求
   (config: RequestConfig): RequestConfig => {
     const requestKey = generateRequestKey(config)
     if (pendingRequests.has(requestKey)) {
@@ -82,9 +79,7 @@ const requestInterceptors: Array<(config: RequestConfig) => RequestConfig> = [
 
 // 响应拦截器链
 const responseInterceptors: Array<(response: any, config: RequestConfig) => any> = [
-  // 1. 解析JSON响应，包括HTTP错误状态
   async (response: Response, config: RequestConfig): Promise<Result> => {
-    // 处理204 No Content
     if (response.status === 204) {
       return {
         code: 200,
@@ -98,11 +93,9 @@ const responseInterceptors: Array<(response: any, config: RequestConfig) => any>
 
     if (contentType.includes('application/json')) {
       const result = await response.json()
-      // 如果是HTTP错误状态但返回了JSON，就直接返回
       return result
     }
 
-    // 如果没有返回JSON但HTTP状态码不是200，就返回一个错误Result
     if (!response.ok) {
       return {
         code: response.status,
@@ -120,20 +113,20 @@ const responseInterceptors: Array<(response: any, config: RequestConfig) => any>
     }
   },
 
-  // 2. 移除完成的请求
   (result: Result, config: RequestConfig): Result => {
     const requestKey = generateRequestKey(config)
     pendingRequests.delete(requestKey)
     return result
   },
 
-  // 3. 处理业务错误
   (result: Result, config: RequestConfig): Result => {
-    // 清理请求队列
     const requestKey = generateRequestKey(config)
     pendingRequests.delete(requestKey)
 
-    // 非200状态码，提示异常信息
+    if (result.code === ErrorCodes.NEED_LOGIN || result.code === ErrorCodes.TOKEN_NEED_REFRESH) {
+      return result
+    }
+
     if (result.code !== 200) {
       const message = result.message || '请求失败'
       if (config.showError !== false) {
@@ -150,16 +143,13 @@ const responseInterceptors: Array<(response: any, config: RequestConfig) => any>
 
 // 错误拦截器链
 const errorInterceptors: Array<(error: any, config: RequestConfig) => any> = [
-  // 1. 清理失败的请求
   (error: any, config: RequestConfig): any => {
     const requestKey = generateRequestKey(config)
     pendingRequests.delete(requestKey)
     return error
   },
 
-  // 2. 处理网络错误等非HTTP响应错误 - 只在没有message时才覆盖
   (error: any, config: RequestConfig): any => {
-    // 如果已经有 message 了，就不覆盖
     if (error.message) {
       return error
     }
@@ -171,19 +161,25 @@ const errorInterceptors: Array<(error: any, config: RequestConfig) => any> = [
     } else if (!navigator.onLine) {
       error.message = '网络连接失败'
     } else if (!error.status) {
-      // 没有status的是真正的网络错误
       error.message = error.message || '请求失败'
     }
     return error
   },
 
-  // 3. 显示错误提示，只在真正的网络错误时显示
   (error: any, config: RequestConfig): any => {
-    // 只有没有status的错误才在这里显示（网络错误）
-    if (config.showError !== false && !error.status) {
+    if (config.showError === false) {
+      return error
+    }
+
+    if (error.code) {
+      return error
+    }
+
+    if (!error.status) {
       const message = error.message || '请求失败'
       toast.error(message)
     }
+
     return error
   }
 ]
@@ -245,15 +241,12 @@ const request = async <T = any>(config: RequestConfig): Promise<T> => {
     showError = true
   } = config
 
-  // 跳过认证的请求（登录、刷新等）
   const skipAuth = ['/login', '/refresh', '/public-key', '/register'].some(
     path => url.includes(path)
   )
 
-  // 构建完整URL
   let fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
 
-  // 处理查询参数
   if (params) {
     const searchParams = new URLSearchParams()
     Object.keys(params).forEach(key => {
@@ -267,81 +260,112 @@ const request = async <T = any>(config: RequestConfig): Promise<T> => {
     }
   }
 
-  // 执行请求拦截器
   const finalConfig = executeInterceptorsSync<RequestConfig>(
     requestInterceptors,
     config
   )
 
-  // 构建请求配置（使用拦截器处理后的配置）
   const fetchOptions: RequestInit = {
     method: finalConfig.method || method,
     headers: {
       'Content-Type': 'application/json',
       ...finalConfig.headers
     },
-    credentials: 'include' // 携带Cookie
+    credentials: 'include'
   }
 
-  // 添加请求体
   if (finalConfig.data && (finalConfig.method || method) !== 'GET') {
     fetchOptions.body = JSON.stringify(finalConfig.data)
   }
 
-  // 超时处理
   const controller = new AbortController()
   fetchOptions.signal = controller.signal
   const timeoutId = setTimeout(() => controller.abort(), timeout)
 
   try {
-    // 发送请求
     const response = await fetch(fullUrl, fetchOptions)
     clearTimeout(timeoutId)
 
-    // 执行响应拦截器，统一处理，包括HTTP错误状态
     const result = await executeInterceptorsAsync<Result>(
       responseInterceptors,
       response,
       finalConfig
     )
 
-    // 统一处理Result类型响应
     if (result && 'code' in result) {
       const apiResult = result as Result<T>
 
-      // 检查是否需要刷新Token
-      if (apiResult.code === 401) {
-        const errorCode = (apiResult as any).errorCode
-
-        // Token过期，尝试刷新
-        if (errorCode === ErrorCodes.TOKEN_EXPIRED && !skipAuth) {
+      if (apiResult.code === ErrorCodes.TOKEN_NEED_REFRESH && !skipAuth) {
+        try {
           const newToken = await tokenManager.handleUnauthorized()
           if (newToken) {
-            // 使用新Token重试请求
             if (!finalConfig.headers) {
               finalConfig.headers = {}
             }
             finalConfig.headers['Authorization'] = `Bearer ${newToken}`
             return request<T>(finalConfig)
           }
+        } catch (refreshError) {
+          if ((refreshError as any).code === 402000) {
+            tokenManager.clearTokens()
+            if (showError !== false) {
+              toast.error((refreshError as any).message || '登录已过期，请重新登录')
+              window.location.href = '/login'
+            }
+            throw refreshError
+          }
+        }
+      }
+
+      if (apiResult.code === 401) {
+        const errorCode = (apiResult as any).errorCode
+
+        if (errorCode === ErrorCodes.TOKEN_EXPIRED && !skipAuth) {
+          try {
+            const newToken = await tokenManager.handleUnauthorized()
+            if (newToken) {
+              if (!finalConfig.headers) {
+                finalConfig.headers = {}
+              }
+              finalConfig.headers['Authorization'] = `Bearer ${newToken}`
+              return request<T>(finalConfig)
+            }
+          } catch (refreshError) {
+            if ((refreshError as any).code === 402000) {
+              tokenManager.clearTokens()
+              if (showError !== false) {
+                toast.error((refreshError as any).message || '登录已过期，请重新登录')
+                window.location.href = '/login'
+              }
+              throw refreshError
+            }
+          }
         }
 
-        // 用户状态变更
         if (errorCode === ErrorCodes.USER_STATUS_CHANGED) {
           tokenManager.clearTokens()
           toast.error('账号状态已变更，请重新登录')
           window.location.href = '/login'
         }
 
-        // 设备异常
         if (errorCode === ErrorCodes.DEVICE_ANOMALY) {
           tokenManager.clearTokens()
           toast.error('设备异常，请重新登录')
           window.location.href = '/login'
         }
 
-        // 其他401错误
         const error = new Error(apiResult.message)
+        ;(error as any).code = apiResult.code
+        throw error
+      }
+
+      if (apiResult.code === ErrorCodes.NEED_LOGIN && !skipAuth) {
+        tokenManager.clearTokens()
+        if (showError !== false) {
+          toast.error(apiResult.message || '请重新登录')
+          window.location.href = '/login'
+        }
+        const error = new Error(apiResult.message || '请重新登录')
         ;(error as any).code = apiResult.code
         throw error
       }
@@ -350,13 +374,11 @@ const request = async <T = any>(config: RequestConfig): Promise<T> => {
         return apiResult.data as T
       }
 
-      // 非200状态码不应该走到这里，因为响应拦截器已经抛出异常了
       return apiResult.data as T
     }
 
     return result as T
   } catch (error) {
-    // 执行错误拦截器
     const finalError = executeInterceptorsSync(errorInterceptors, error, finalConfig)
     throw finalError
   }
@@ -409,13 +431,11 @@ export const http = {
     })
   },
 
-  // 取消所有请求
   cancelAll: () => {
     pendingRequests.forEach(controller => controller.abort())
     pendingRequests.clear()
   },
 
-  // 取消特定请求
   cancel: (config: RequestConfig) => {
     const requestKey = generateRequestKey(config)
     const controller = pendingRequests.get(requestKey)
@@ -424,7 +444,6 @@ export const http = {
   }
 }
 
-// 导出错误码
 export { ErrorCodes }
 
 export default http

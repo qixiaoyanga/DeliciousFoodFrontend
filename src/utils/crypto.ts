@@ -26,15 +26,10 @@ const getTimestamp = (): string => {
 // 获取RSA公钥
 export const getPublicKey = async (): Promise<string> => {
   if (publicKeyCache) {
-    console.log('✅ RSA公钥已缓存，直接返回')
-    console.log('缓存的公钥:', publicKeyCache.substring(0, 50) + '...')
     return publicKeyCache
   }
 
   try {
-    console.log('🔄 正在获取RSA公钥...')
-    console.log('请求路径:', `${BASE_URL}${CUSTOMER_API.PUBLIC_KEY}`)
-
     const response = await fetch(`${BASE_URL}${CUSTOMER_API.PUBLIC_KEY}`, {
       method: 'GET',
       headers: {
@@ -49,28 +44,13 @@ export const getPublicKey = async (): Promise<string> => {
     const result = await response.json()
     const publicKey = result.data
 
-    console.log('📥 请求响应:')
-    console.log('- 类型:', typeof publicKey)
-    console.log('- 长度:', publicKey?.length || 0)
-    console.log('- 前50字符:', String(publicKey).substring(0, 50))
-
     if (!publicKey || typeof publicKey !== 'string') {
-      console.error('❌ 后端返回的数据类型错误:', typeof publicKey, publicKey)
       throw new Error('后端返回的公钥格式错误')
     }
 
-    if (!publicKey.includes('-----BEGIN')) {
-      console.warn('⚠️ 警告：公钥可能缺少 PEM 头')
-    }
-
     publicKeyCache = publicKey
-    console.log('✅ 公钥已缓存，长度:', publicKey.length)
     return publicKey
   } catch (error: any) {
-    console.error('❌ 获取公钥失败:')
-    console.error('- 错误类型:', error?.constructor?.name)
-    console.error('- 错误信息:', error?.message)
-    console.error('- 完整错误:', error)
     throw new Error('无法获取RSA公钥，请检查后端服务是否启动')
   }
 }
@@ -84,33 +64,21 @@ export interface EncryptedResult {
 
 // RSA加密密码
 export const encryptPassword = (password: string, publicKey: string): EncryptedResult => {
-  try {
-    const timestamp = getTimestamp()
-    const nonce = generateNonce()
+  const timestamp = getTimestamp()
+  const nonce = generateNonce()
 
-    console.log('🔐 正在加密密码...')
-    console.log('- 密码长度:', password.length)
+  const encryptor = new JSEncrypt()
+  encryptor.setPublicKey(publicKey)
+  const encryptedData = encryptor.encrypt(password)
 
-    // 使用 RSA 公钥加密密码
-    const encryptor = new JSEncrypt()
-    encryptor.setPublicKey(publicKey)
-    const encryptedData = encryptor.encrypt(password)
+  if (!encryptedData) {
+    throw new Error('RSA加密失败：加密结果为空，请检查公钥格式是否正确')
+  }
 
-    if (!encryptedData) {
-      throw new Error('RSA加密失败：加密结果为空，请检查公钥格式是否正确')
-    }
-
-    console.log('✅ RSA加密完成')
-    console.log('- 加密后长度:', encryptedData.length)
-
-    return {
-      encryptedData,
-      timestamp,
-      nonce
-    }
-  } catch (error) {
-    console.error('❌ 加密失败:', error)
-    throw error
+  return {
+    encryptedData,
+    timestamp,
+    nonce
   }
 }
 
@@ -124,12 +92,11 @@ export const generateDeviceFingerprint = (): string => {
 
   const rawFingerprint = `${ua}|${screen}|${timezone}|${language}|${platform}`
 
-  // 简单的hash实现
   let hash = 0
   for (let i = 0; i < rawFingerprint.length; i++) {
     const char = rawFingerprint.charCodeAt(i)
     hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32bit integer
+    hash = hash & hash
   }
 
   return Math.abs(hash).toString(16)

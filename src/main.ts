@@ -13,10 +13,8 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 
-// 先尝试自动登录（通过refreshToken刷新获取accessToken）
 autoLogin().then(() => {
   app.mount('#app')
 }).catch(() => {
-  // 自动登录失败也正常启动应用（可能用户未登录）
   app.mount('#app')
 })

@@ -12,4 +12,6 @@ export { userApi } from './user'
 
 export { cartApi } from './cart'
 
+export { addressApi } from './address'
+
 export { merchantApi, merchantShopApi, merchantDishApi, merchantOrderApi } from './merchant'

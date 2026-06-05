@@ -93,7 +93,7 @@ class TokenManager {
     this.user = null
   }
 
-  // 刷新Token
+  // 刷新Token（显示错误信息）
   async doRefreshToken(): Promise<string | null> {
     if (isRefreshing) {
       return new Promise((resolve) => {
@@ -104,7 +104,6 @@ class TokenManager {
     }
 
     if (!this.refreshToken) {
-      toast.error('登录已过期，请重新登录')
       return null
     }
 
@@ -114,9 +113,17 @@ class TokenManager {
       const result = await http.post<{
         accessToken: string
         refreshToken?: string
+        code?: number
+        message?: string
       }>(CUSTOMER_API.REFRESH, {
         fingerprint: generateDeviceFingerprint()
       })
+
+      if (result.code && result.code !== 200) {
+        const error = new Error(result.message || '刷新失败')
+        ;(error as any).code = result.code
+        throw error
+      }
 
       if (result.accessToken) {
         this.setTokens(
@@ -133,9 +140,7 @@ class TokenManager {
       return null
     } catch (error) {
       this.clearTokens()
-      toast.error('会话已过期，请重新登录')
-      window.location.href = '/login'
-      return null
+      throw error
     } finally {
       isRefreshing = false
     }
@@ -143,7 +148,22 @@ class TokenManager {
 
   // 处理401错误
   async handleUnauthorized(): Promise<string | null> {
-    return await this.doRefreshToken()
+    try {
+      const result = await this.doRefreshToken()
+      if (!result) {
+        const error = new Error('登录已过期，请重新登录')
+        ;(error as any).code = 402000
+        throw error
+      }
+      return result
+    } catch (error) {
+      if ((error as any).code === 402000) {
+        throw error
+      }
+      const newError = new Error((error as any).message || '登录已过期，请重新登录')
+      ;(newError as any).code = 402000
+      throw newError
+    }
   }
 
   // 获取状态
@@ -172,6 +192,12 @@ export const isTokenExpired = () => tokenManager.isTokenExpired()
 
 // 自动登录 - 通过refreshToken刷新获取新的accessToken
 export const autoLogin = async (): Promise<boolean> => {
+  const isLoginPage = window.location.pathname === '/login'
+  
+  if (tokenManager.getAccessToken() && !tokenManager.isTokenExpired()) {
+    return true
+  }
+  
   try {
     const result = await http.post<{
       accessToken: string
@@ -183,9 +209,20 @@ export const autoLogin = async (): Promise<boolean> => {
       image?: string
       gender?: number
       createTime?: string
+      code?: number
+      message?: string
     }>(CUSTOMER_API.REFRESH, {
       fingerprint: generateDeviceFingerprint()
-    })
+    }, { showError: false })
+
+    if (result.code && result.code !== 200) {
+      tokenManager.clearTokens()
+      toast.error(result.message || '登录已过期，请重新登录')
+      if (!isLoginPage) {
+        window.location.href = '/login'
+      }
+      return false
+    }
 
     if (result.accessToken) {
       const user: User = {
@@ -202,6 +239,13 @@ export const autoLogin = async (): Promise<boolean> => {
     }
     return false
   } catch (error) {
+    if ((error as any).code === 402000) {
+      tokenManager.clearTokens()
+      toast.error((error as any).message || '登录已过期，请重新登录')
+      if (!isLoginPage) {
+        window.location.href = '/login'
+      }
+    }
     return false
   }
 }

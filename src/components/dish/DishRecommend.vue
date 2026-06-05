@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Dish } from '@/types'
 import DishCard from './DishCard.vue'
+import { useRouter } from 'vue-router'
 
 interface Props {
   dishes: Dish[]
@@ -10,6 +11,14 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   title: '推荐菜品'
 })
+
+const router = useRouter()
+
+const handleDishClick = (dish: Dish) => {
+  if (dish.shopId) {
+    router.push(`/shop/${dish.shopId}`)
+  }
+}
 </script>
 
 <template>
@@ -28,6 +37,7 @@ withDefaults(defineProps<Props>(), {
           v-for="dish in dishes"
           :key="dish.id"
           :dish="dish"
+          @click="handleDishClick"
         />
       </div>
     </div>

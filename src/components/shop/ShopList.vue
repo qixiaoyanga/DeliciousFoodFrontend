@@ -35,8 +35,18 @@ const props = withDefaults(defineProps<Props>(), {
     </div>
 
     <div v-if="!loading && shops.length === 0" class="empty-state">
-      <div class="empty-icon">🍽️</div>
-      <p class="empty-text">暂无店铺数据</p>
+      <div class="empty-illustration">
+        <div class="empty-icon">🏪</div>
+        <div class="empty-decoration empty-decoration-1">🍔</div>
+        <div class="empty-decoration empty-decoration-2">🍕</div>
+        <div class="empty-decoration empty-decoration-3">🍟</div>
+      </div>
+      <h3 class="empty-title">暂无店铺</h3>
+      <p class="empty-text">当前分类下还没有店铺入驻</p>
+      <button class="empty-action" @click="$emit('refresh')">
+        <span class="action-icon">🔄</span>
+        刷新试试
+      </button>
     </div>
   </div>
 </template>
@@ -111,17 +121,109 @@ const props = withDefaults(defineProps<Props>(), {
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.03) 0%, rgba(255, 217, 61, 0.03) 100%);
+  border-radius: var(--radius-xl);
+  margin-top: 24px;
+}
+
+.empty-illustration {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 24px;
 }
 
 .empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 80px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: float 3s ease-in-out infinite;
+}
+
+.empty-decoration {
+  position: absolute;
+  font-size: 32px;
+}
+
+.empty-decoration-1 {
+  top: 10%;
+  left: 10%;
+  animation: float 3s ease-in-out infinite 0.5s;
+}
+
+.empty-decoration-2 {
+  top: 10%;
+  right: 10%;
+  animation: float 3s ease-in-out infinite 1s;
+}
+
+.empty-decoration-3 {
+  bottom: 20%;
+  right: 20%;
+  animation: float 3s ease-in-out infinite 1.5s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.empty-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
 }
 
 .empty-text {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.empty-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.empty-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.empty-action:active {
+  transform: translateY(0);
+}
+
+.action-icon {
+  font-size: 16px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media screen and (max-width: 768px) {

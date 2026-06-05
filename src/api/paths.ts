@@ -53,13 +53,24 @@ export const CUSTOMER_API = {
   ORDER_CANCEL: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/cancel`,
   ORDER_CONFIRM: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/confirm`,
   ORDER_PAY: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/pay`,
+  ORDER_UPDATE_ADDRESS: `${API_PREFIX_CUSTOMER}/order/updateAddress`,
+  ORDER_UPDATE_REMARK: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/remark`,
+  ORDER_UPDATE_PAYTYPE: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/paytype`,
 
   // 购物车
   CART_GET: `${API_PREFIX_CUSTOMER}/cart`,
   CART_ADD: `${API_PREFIX_CUSTOMER}/cart/add`,
   CART_UPDATE: `${API_PREFIX_CUSTOMER}/cart/update`,
+  CART_UPDATE_QUANTITY: `${API_PREFIX_CUSTOMER}/cart/quantity`,
   CART_REMOVE: `${API_PREFIX_CUSTOMER}/cart/remove`,
-  CART_CLEAR: `${API_PREFIX_CUSTOMER}/cart/clear`
+  CART_CLEAR: `${API_PREFIX_CUSTOMER}/cart/clear`,
+
+  // 地址
+  ADDRESS_LIST: `${API_PREFIX_CUSTOMER}/address/list`,
+  ADDRESS_ADD: `${API_PREFIX_CUSTOMER}/address/add`,
+  ADDRESS_UPDATE: (id: number) => `${API_PREFIX_CUSTOMER}/address/${id}`,
+  ADDRESS_DELETE: (id: number) => `${API_PREFIX_CUSTOMER}/address/${id}/delete`,
+  ADDRESS_SET_DEFAULT: (id: number) => `${API_PREFIX_CUSTOMER}/address/${id}/default`
 } as const
 
 // ==================== 商家端API路径（预留） ====================

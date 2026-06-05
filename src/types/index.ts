@@ -1,33 +1,108 @@
 export interface Shop {
   id: number
   name: string
-  rating: number
-  sales: number
-  minimumOrder: number
-  deliveryFee: number
-  deliveryTime: string
-  image: string
-  categories: string[]
+  logo: string
   description?: string
+  grade: number
+  monthlySales: number
+  delivery: number
+  minOrderAmount: number
+  businessHours?: string
+}
+
+export interface DishSpec {
+  dishId: number
+  name: string
+  price: number
+  stock: number
+  status: number
+  createTime: string
+}
+
+export interface AttributeOption {
+  id: number
+  attributeId: number
+  name: string
+  priceModifier: number
+  stock: number
+  createTime: string
+}
+
+export interface DishAttribute {
+  id: number
+  dishId: number
+  name: string
+  required: number
+  maxSelect: number
+  status: number
+  createTime: string
+  options: AttributeOption[]
+}
+
+export interface DishCategory {
+  id: number
+  shopId: number
+  name: string
+  sort: number
+  status: number
+  createTime: string
 }
 
 export interface Dish {
   id: number
-  name: string
-  price: number
-  originalPrice?: number
-  image: string
-  sales: number
-  rating: number
   shopId: number
+  categoryId: number
+  category?: DishCategory
+  name: string
+  image: string
   description?: string
+  price: number
+  salesPrice: number
+  boxPrice: number
+  stock: number
+  status: number
+  sales: number
+  monthSales: number
+  recommend: number
+  createTime: string
+  updateTime: string
+  specs?: DishSpec[]
+  attributes?: DishAttribute[]
 }
 
 export interface Category {
   id: number
   name: string
-  icon: string
-  count: number
+  icon?: string
+  count?: number
+}
+
+export interface CartItemAttributeOption {
+  id: number
+  name: string
+  priceModifier: number
+}
+
+export interface CartItem {
+  id: number
+  dishId: number
+  name: string
+  price: number
+  salesPrice: number
+  image: string
+  shopId: number
+  shopName?: string
+  shopDelivery?: number
+  quantity: number
+  specName?: string
+  boxPrice?: number
+  totalPrice?: number
+  attributeOptions?: CartItemAttributeOption[]
+  selected?: boolean
+}
+
+export interface CartState {
+  items: CartItem[]
 }
 
 export interface CarouselItem {
@@ -87,6 +162,7 @@ export interface RequestConfig {
   showLoading?: boolean
   showError?: boolean
   signal?: AbortSignal
+  skipAuth?: boolean
 }
 
 // 响应状态类型

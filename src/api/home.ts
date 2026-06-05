@@ -5,37 +5,36 @@ import { CUSTOMER_API } from './paths'
 
 // 分类相关API
 export const categoryApi = {
-  // 获取分类列表
   async getList(): Promise<Category[]> {
-    return await http.get<Category[]>(CUSTOMER_API.CATEGORY_LIST)
+    return await http.get<Category[]>(CUSTOMER_API.CATEGORY_LIST, undefined, { skipAuth: true })
   }
 }
 
 // 轮播图相关API
 export const carouselApi = {
-  // 获取轮播图列表
   async getList(): Promise<CarouselItem[]> {
-    return await http.get<CarouselItem[]>(CUSTOMER_API.BANNER_LIST)
+    return await http.get<CarouselItem[]>(CUSTOMER_API.BANNER_LIST, undefined, { skipAuth: true })
   }
 }
 
 // 店铺相关API
 export const shopApi = {
-  // 获取店铺列表
-  async getList(params?: { categoryId?: number; page?: number; pageSize?: number }): Promise<{ list: Shop[]; total: number }> {
-    return await http.get<{ list: Shop[]; total: number }>(CUSTOMER_API.SHOP_LIST, params)
+  async getList(params?: { tagId?: number; page?: number; pageSize?: number }): Promise<{ list: Shop[]; total: number }> {
+    const result = await http.get<{ records: Shop[]; total: number }>(CUSTOMER_API.SHOP_LIST, params, { skipAuth: true })
+    return {
+      list: result.records,
+      total: result.total
+    }
   },
 
-  // 搜索店铺
   async search(keyword: string): Promise<Shop[]> {
-    return await http.get<Shop[]>(CUSTOMER_API.SHOP_SEARCH, { keyword })
+    return await http.get<Shop[]>(CUSTOMER_API.SHOP_SEARCH, { keyword }, { skipAuth: true })
   }
 }
 
 // 菜品推荐API
 export const dishApi = {
-  // 获取推荐菜品
   async getRecommend(params?: { limit?: number }): Promise<Dish[]> {
-    return await http.get<Dish[]>(CUSTOMER_API.DISH_RECOMMEND, params)
+    return await http.get<Dish[]>(CUSTOMER_API.DISH_RECOMMEND, params, { skipAuth: true })
   }
 }

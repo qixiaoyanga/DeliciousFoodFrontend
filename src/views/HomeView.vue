@@ -10,7 +10,8 @@ import { categoryApi, carouselApi, shopApi, dishApi } from '@/api'
 import type { Category, Shop, Dish, CarouselItem } from '@/types'
 
 const isLoading = ref(true)
-const selectedCategory = ref<Category>(categoryData[0] || { id: 1, name: '全部', icon: '🍽️', count: 0 })
+const allCategory: Category = { id: 0, name: '全部', icon: '🍽️', count: 0 }
+const selectedCategory = ref<Category>(allCategory)
 const filteredShops = ref<Shop[]>([])
 const categories = ref<Category[]>([])
 const carousels = ref<CarouselItem[]>([])
@@ -34,19 +35,12 @@ const loadCarousels = async (): Promise<CarouselItem[]> => {
   }
 }
 
-const loadShops = async (categoryId?: number): Promise<Shop[]> => {
+const loadShops = async (tagId?: number): Promise<Shop[]> => {
   try {
-    const result = await shopApi.getList({ categoryId, page: 1, pageSize: 20 })
+    const result = await shopApi.getList({ tagId, page: 1, pageSize: 20 })
     return result.list
   } catch (error) {
     console.error('加载店铺失败:', error)
-    if (categoryId && categoryId !== 1) {
-      return shopData.filter(shop =>
-        shop.categories.some(cat =>
-          cat.toLowerCase().includes((categories.value.find(c => c.id === categoryId)?.name || '').toLowerCase())
-        )
-      )
-    }
     return shopData
   }
 }
@@ -69,15 +63,17 @@ const initData = async () => {
       loadShops(),
       loadRecommendDishes()
     ])
-    categories.value = cats
+    categories.value = [allCategory, ...cats]
     carousels.value = items
     filteredShops.value = shops
     recommendDishes.value = dishes
-    if (cats.length > 0) {
-      selectedCategory.value = cats[0] || { id: 1, name: '全部', icon: '🍽️', count: 0 }
-    }
+    selectedCategory.value = allCategory
   } catch (error) {
     console.error('初始化数据失败:', error)
+    categories.value = [allCategory, ...categoryData]
+    carousels.value = carouselData
+    filteredShops.value = shopData
+    recommendDishes.value = dishData.slice(0, 6)
   } finally {
     isLoading.value = false
   }
@@ -91,7 +87,8 @@ const handleCategorySelect = async (category: Category) => {
   selectedCategory.value = category
   isLoading.value = true
   try {
-    filteredShops.value = await loadShops(category.id)
+    const tagId = category.id === 0 ? undefined : category.id
+    filteredShops.value = await loadShops(tagId)
   } catch (error) {
     console.error('切换分类失败:', error)
   } finally {
@@ -122,7 +119,7 @@ const handleCategorySelect = async (category: Category) => {
       <div class="container">
         <div class="section-header">
           <h2 class="section-title">
-            {{ selectedCategory.id === 1 ? '热门店铺' : `${selectedCategory.name}店铺` }}
+            {{ selectedCategory.id === 0 ? '热门店铺' : `${selectedCategory.name}店铺` }}
           </h2>
           <span class="shop-count">共 {{ filteredShops.length }} 家</span>
         </div>

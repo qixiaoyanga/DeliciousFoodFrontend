@@ -6,12 +6,14 @@ import { CUSTOMER_API } from './paths'
 export const orderApi = {
   // 创建订单
   async create(data: {
-    shopId: number
-    items: Array<{ dishId: number; quantity: number }>
-    remark?: string
+    cartIds: number[]
     address?: string
-  }): Promise<{ orderId: number }> {
-    return await http.post<{ orderId: number }>(CUSTOMER_API.ORDER_CREATE, data)
+    addressName?: string
+    addressPhone?: string
+    remark?: string
+    payType?: number
+  }): Promise<any> {
+    return await http.post<any>(CUSTOMER_API.ORDER_CREATE, data)
   },
 
   // 获取订单列表
@@ -35,7 +37,27 @@ export const orderApi = {
   },
 
   // 支付订单
-  async pay(id: number): Promise<{ payUrl?: string }> {
-    return await http.post<{ payUrl?: string }>(CUSTOMER_API.ORDER_PAY(id))
+  async pay(data: {
+    orderNo: number
+    payType: number
+    address?: any
+    remark?: string
+  }): Promise<{ payUrl?: string }> {
+    return await http.post<{ payUrl?: string }>(CUSTOMER_API.ORDER_PAY(data.orderNo), data)
+  },
+
+  // 更新订单地址
+  async updateAddress(data: { orderNo: number; addressId: number }): Promise<void> {
+    await http.post(CUSTOMER_API.ORDER_UPDATE_ADDRESS, data)
+  },
+
+  // 更新订单备注
+  async updateRemark(id: number, data: { remark: string }): Promise<void> {
+    await http.post(CUSTOMER_API.ORDER_UPDATE_REMARK(id), data)
+  },
+
+  // 更新支付方式
+  async updatePayType(id: number, data: { payType: number }): Promise<void> {
+    await http.post(CUSTOMER_API.ORDER_UPDATE_PAYTYPE(id), data)
   }
 }
