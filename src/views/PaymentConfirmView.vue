@@ -12,6 +12,25 @@ const confirming = ref(false)
 const payData = ref<any>(null)
 const orderNo = ref(0)
 
+const showWalletModal = ref(false)
+const walletPassword = ref('')
+
+const payType = ref(1)
+const remark = ref('')
+const address = ref<any>(null)
+
+interface AddressInfo {
+  id: number
+  consignee: string
+  phone: string
+  province?: string
+  city?: string
+  district?: string
+  detail: string
+  fullAddress: string
+  defaulted?: number
+}
+
 const getPayTypeText = (type: number) => {
   const payMap: Record<number, string> = {
     1: '微信支付',
@@ -31,8 +50,10 @@ const getPayTypeIcon = (type: number) => {
   }
 }
 
-// 解析地址JSON
 const addressInfo = computed(() => {
+  if (address.value) {
+    return address.value
+  }
   if (!payData.value?.address) return null
   try {
     if (typeof payData.value.address === 'string') {
@@ -45,54 +66,162 @@ const addressInfo = computed(() => {
   }
 })
 
-const loadPayData = () => {
-  const payDataParam = route.query.payData as string
+const loadPayData = async () => {
   const orderNoParam = route.query.orderNo as string
-  
-  if (!payDataParam) {
-    toast.error('支付数据不存在')
-    router.back()
-    return
-  }
+  const orderIdParam = route.params.id as string
 
-  try {
-    payData.value = JSON.parse(payDataParam)
-    orderNo.value = parseInt(orderNoParam || payData.value.orderNo)
-    console.log('支付数据:', payData.value)
-  } catch (error: any) {
-    console.error('解析支付数据失败:', error)
-    toast.error('支付数据解析失败')
+  const orderNoStr = orderNoParam || orderIdParam
+
+  if (orderNoStr) {
+    orderNo.value = parseInt(orderNoStr)
+
+    const dtoStr = sessionStorage.getItem('confirmPaymentDTO')
+    if (dtoStr) {
+      try {
+        const dto = JSON.parse(dtoStr)
+        if (dto.payType) {
+          payType.value = dto.payType
+        }
+        if (dto.remark) {
+          remark.value = dto.remark
+        }
+        if (dto.address) {
+          address.value = dto.address as AddressInfo
+          console.log('从sessionStorage获取地址:', address.value)
+        }
+        sessionStorage.removeItem('confirmPaymentDTO')
+      } catch (e) {
+        console.error('解析confirmPaymentDTO失败:', e)
+      }
+    }
+
+    try {
+      const orders = await orderApi.getDetail(orderNo.value)
+      if (Array.isArray(orders) && orders.length > 0) {
+        payData.value = orders[0]
+        if (!payType.value && payData.value.payMethod) {
+          payType.value = payData.value.payMethod
+        }
+        if (!remark.value && payData.value.remark) {
+          remark.value = payData.value.remark
+        }
+        console.log('从后端获取支付数据:', payData.value)
+      } else {
+        toast.error('订单不存在')
+        router.back()
+      }
+    } catch (error: any) {
+      console.error('获取订单信息失败:', error)
+      toast.error('获取订单信息失败')
+      router.back()
+    } finally {
+      loading.value = false
+    }
+  } else {
+    toast.error('订单编号不存在')
     router.back()
-  } finally {
     loading.value = false
-  }
-}
-
-// 确认支付
-const confirmPay = async () => {
-  if (confirming.value) return
-  
-  confirming.value = true
-  try {
-    // 这里可以调用实际的支付确认接口
-    // await orderApi.confirmPay(orderNo.value)
-    
-    toast.success('支付成功')
-    
-    // 跳转到订单详情
-    setTimeout(() => {
-      router.replace({ path: '/order/detail', query: { orderNo: orderNo.value.toString() } })
-    }, 1000)
-  } catch (error: any) {
-    console.error('支付确认失败:', error)
-    toast.error('支付确认失败')
-  } finally {
-    confirming.value = false
   }
 }
 
 const goBack = () => {
   router.back()
+}
+
+let pollTimer: number | null = null
+
+const checkPayStatus = async () => {
+  try {
+    const orders = await orderApi.getDetail(orderNo.value)
+    if (Array.isArray(orders) && orders.length > 0) {
+      const order = orders[0]
+      if (order.status === 2 || order.status === 8) {
+        if (pollTimer) {
+          clearInterval(pollTimer)
+          pollTimer = null
+        }
+        toast.success('支付成功')
+        router.replace({ path: '/payment/success', query: { orderNo: orderNo.value.toString() } })
+      }
+    }
+  } catch (error) {
+    console.error('检查支付状态失败:', error)
+  }
+}
+
+const handleWechatPay = async () => {
+  try {
+    await orderApi.wechatPay(orderNo.value)
+    router.replace({ path: '/payment/success', query: { orderNo: orderNo.value.toString(), payMethod: '1' } })
+  } catch (error: any) {
+    console.error('微信支付失败:', error)
+    toast.error(error.message || '支付失败')
+  }
+}
+
+const handleAlipayPay = async () => {
+  try {
+    const html = await orderApi.alipayPay(orderNo.value)
+
+    const payWindow = window.open('', '_blank')
+    if (payWindow) {
+      const cleanHtml = html.replace(/[\r\n]+/g, '').trim()
+      payWindow.document.write(cleanHtml)
+      payWindow.document.close()
+
+      pollTimer = window.setInterval(checkPayStatus, 3000)
+      toast.info('正在等待支付，请在新窗口完成支付')
+    } else {
+      toast.error('无法打开新窗口，请检查浏览器设置')
+    }
+  } catch (error: any) {
+    console.error('支付宝支付失败:', error)
+    toast.error(error.message || '支付宝支付失败')
+  }
+}
+
+const handleWalletPay = async (password: string) => {
+  if (!password.trim()) {
+    toast.error('请输入支付密码')
+    return
+  }
+
+  try {
+    await orderApi.walletPay({ orderNo: orderNo.value, password })
+    showWalletModal.value = false
+    walletPassword.value = ''
+    router.replace({ path: '/payment/success', query: { orderNo: orderNo.value.toString(), payMethod: '3' } })
+  } catch (error: any) {
+    console.error('钱包支付失败:', error)
+    toast.error(error.message || '钱包支付失败')
+  }
+}
+
+const confirmPay = async () => {
+  if (confirming.value) return
+
+  confirming.value = true
+  try {
+    if (payType.value === 1) {
+      await handleWechatPay()
+    } else if (payType.value === 2) {
+      await handleAlipayPay()
+    } else if (payType.value === 3) {
+      showWalletModal.value = true
+    } else {
+      toast.error('请选择支付方式')
+    }
+  } catch (error: any) {
+    console.error('支付失败:', error)
+    toast.error('支付失败')
+  } finally {
+    confirming.value = false
+  }
+}
+
+const closeWalletModal = () => {
+  showWalletModal.value = false
+  walletPassword.value = ''
 }
 
 onMounted(() => {
@@ -113,7 +242,7 @@ onMounted(() => {
           <button class="back-btn" @click="goBack">
             <span class="back-icon">←</span>
           </button>
-          <h1 class="detail-title">确认支付</h1>
+          <h1 class="detail-title">确认订单</h1>
           <div class="placeholder"></div>
         </div>
 
@@ -127,10 +256,6 @@ onMounted(() => {
             <div class="info-row">
               <span class="info-label">订单编号</span>
               <span class="info-value">{{ payData.orderNo }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">用户ID</span>
-              <span class="info-value">{{ payData.userId }}</span>
             </div>
           </div>
         </div>
@@ -147,9 +272,6 @@ onMounted(() => {
               <span class="user-phone">{{ addressInfo.phone }}</span>
             </div>
             <p class="address-detail">{{ addressInfo.fullAddress }}</p>
-            <div v-if="addressInfo.longitude && addressInfo.latitude" class="address-location">
-              <span class="location-text">📍 经度: {{ addressInfo.longitude.toFixed(6) }}, 纬度: {{ addressInfo.latitude.toFixed(6) }}</span>
-            </div>
           </div>
           <div v-else class="no-data">
             <p>暂无地址信息</p>
@@ -163,8 +285,8 @@ onMounted(() => {
             <span>支付方式</span>
           </div>
           <div class="pay-method-content">
-            <div class="pay-method-icon" v-html="getPayTypeIcon(payData.payMethod)"></div>
-            <span class="pay-method-name">{{ getPayTypeText(payData.payMethod) }}</span>
+            <div class="pay-method-icon" v-html="getPayTypeIcon(payType)"></div>
+            <span class="pay-method-name">{{ getPayTypeText(payType) }}</span>
           </div>
         </div>
 
@@ -207,8 +329,35 @@ onMounted(() => {
 
       <div v-else class="error-container">
         <div class="error-icon">❌</div>
-        <h3 class="error-title">支付数据加载失败</h3>
+        <h3 class="error-title">订单数据加载失败</h3>
         <button class="go-back-btn" @click="goBack">返回</button>
+      </div>
+    </div>
+
+    <!-- 钱包支付密码弹窗 -->
+    <div v-if="showWalletModal" class="modal-overlay" @click="closeWalletModal">
+      <div class="wallet-modal" @click.stop>
+        <div class="modal-header">
+          <span class="modal-title">输入支付密码</span>
+          <button class="modal-close" @click="closeWalletModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="wallet-icon">💰</div>
+          <p class="modal-desc">请输入您的钱包支付密码</p>
+          <input
+            type="password"
+            v-model="walletPassword"
+            class="password-input"
+            placeholder="请输入6位数字密码"
+            maxlength="6"
+            @keyup.enter="handleWalletPay(walletPassword)"
+          />
+          <div class="password-tips">密码错误超过3次将锁定账户</div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel-btn" @click="closeWalletModal">取消</button>
+          <button class="modal-btn confirm-btn" @click="handleWalletPay(walletPassword)">确认支付</button>
+        </div>
       </div>
     </div>
   </div>
@@ -386,18 +535,7 @@ onMounted(() => {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.5;
-  margin: 0 0 8px 0;
-}
-
-.address-location {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(74, 55, 40, 0.1);
-}
-
-.location-text {
-  font-size: 12px;
-  color: var(--text-muted);
+  margin: 0;
 }
 
 .no-data p {
@@ -436,9 +574,9 @@ onMounted(() => {
 }
 
 .remark-content p {
+  margin: 0;
   font-size: 14px;
   color: var(--text-primary);
-  margin: 0;
 }
 
 .no-remark {
@@ -449,19 +587,16 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 12px;
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.05) 0%, rgba(255, 217, 61, 0.05) 100%);
-  border-radius: var(--radius-md);
+  padding: 12px;
 }
 
 .amount-label {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .amount-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--primary-color);
 }
@@ -479,34 +614,137 @@ onMounted(() => {
 .confirm-btn {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  background: var(--primary-color);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.2s;
 }
 
-.confirm-btn:hover:not(.disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+.confirm-btn:hover {
+  background: var(--primary-dark);
 }
 
 .confirm-btn.disabled {
-  opacity: 0.5;
+  background: var(--text-muted);
   cursor: not-allowed;
 }
 
-@media screen and (max-width: 768px) {
-  .payment-confirm-view {
-    min-height: calc(100vh - 80px);
-    padding-bottom: 100px;
-  }
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
 
-  .amount-value {
-    font-size: 28px;
-  }
+.wallet-modal {
+  background: white;
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(74, 55, 40, 0.1);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.wallet-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.modal-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.password-input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(74, 55, 40, 0.2);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 4px;
+  box-sizing: border-box;
+}
+
+.password-tips {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1px solid rgba(74, 55, 40, 0.1);
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-btn.cancel-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border-right: 1px solid rgba(74, 55, 40, 0.1);
+}
+
+.modal-btn.cancel-btn:hover {
+  background: rgba(74, 55, 40, 0.05);
+}
+
+.modal-btn.confirm-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.modal-btn.confirm-btn:hover {
+  background: var(--primary-dark);
 }
 </style>

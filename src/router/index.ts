@@ -9,6 +9,24 @@ const routes: RouteRecordRaw[] = [
     meta: { showNavFooter: false }
   },
   {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/views/RegisterView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/forgot-password',
+    name: 'forgotPassword',
+    component: () => import('@/views/ForgotPasswordView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/shops',
+    name: 'shops',
+    component: () => import('@/views/ShopListView.vue'),
+    meta: { showNavFooter: true }
+  },
+  {
     path: '/',
     name: 'home',
     component: () => import('@/views/HomeView.vue'),
@@ -47,7 +65,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/order/detail/:id',
     name: 'orderDetail',
-    component: () => import('@/views/OrderDetailView.vue'),
+    component: () => import('@/views/OrderDetailPage.vue'),
     meta: { showNavFooter: false }
   },
   {
@@ -57,10 +75,34 @@ const routes: RouteRecordRaw[] = [
     meta: { showNavFooter: false }
   },
   {
+    path: '/order/:id/pay',
+    name: 'orderPay',
+    component: () => import('@/views/PaymentConfirmView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
     path: '/payment/confirm',
     name: 'paymentConfirm',
     component: () => import('@/views/PaymentConfirmView.vue'),
     meta: { showNavFooter: false }
+  },
+  {
+    path: '/payment/success',
+    name: 'paymentSuccess',
+    component: () => import('@/views/PaymentSuccessView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/payment/alipay',
+    name: 'alipay',
+    component: () => import('@/views/AlipayView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/PersonalCenterView.vue'),
+    meta: { showNavFooter: true }
   }
 ]
 

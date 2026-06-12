@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authApi } from '@/api'
 import { tokenManager } from '@/utils/token'
-import { encryptPassword, getPublicKey } from '@/utils/crypto'
+import { encryptPassword } from '@/utils/crypto'
 import { toast } from '@/utils/toast'
 
 const router = useRouter()
@@ -29,7 +29,7 @@ const handleLogin = async () => {
   if (isLoading.value) {
     return
   }
-  
+
   errorMessage.value = ''
 
   if (loginType.value === 'phone') {
@@ -66,7 +66,7 @@ const handleLogin = async () => {
 
   isLoading.value = true
   try {
-    const publicKey = await getPublicKey()
+    const publicKey = await authApi.getPublicKey()
     const { encryptedData, timestamp, nonce } = encryptPassword(password.value, publicKey)
     const success = await authApi.doLogin(account, encryptedData, timestamp, nonce)
     if (success) {
@@ -81,7 +81,7 @@ const handleLogin = async () => {
 }
 
 const goToRegister = () => {
-  toast.info('注册功能开发中...')
+  router.push('/register')
 }
 </script>
 
@@ -170,7 +170,7 @@ const goToRegister = () => {
         </button>
 
         <div class="form-options">
-          <a href="#" class="option-link">忘记密码？</a>
+          <a href="/forgot-password" class="option-link">忘记密码？</a>
           <span class="divider">|</span>
           <a href="#" class="option-link">忘记账号？</a>
         </div>

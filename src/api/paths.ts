@@ -24,10 +24,19 @@ export const CUSTOMER_API = {
   REFRESH: `${API_PREFIX_CUSTOMER}/refresh`,
   LOGOUT: `${API_PREFIX_CUSTOMER}/logout`,
 
+  // 找回密码
+  FORGOT_PASSWORD_SEND_CODE: `${API_PREFIX_PUBLIC}/forgot-password/send-code`,
+  FORGOT_PASSWORD_VERIFY_CODE: `${API_PREFIX_PUBLIC}/forgot-password/verify-code`,
+  FORGOT_PASSWORD_RESET: `${API_PREFIX_PUBLIC}/forgot-password/reset`,
+
   // 用户
   USER_CURRENT: `${API_PREFIX_CUSTOMER}/user/current`,
   USER_INFO: `${API_PREFIX_CUSTOMER}/user/info`,
   USER_UPDATE: `${API_PREFIX_CUSTOMER}/user/update`,
+  USER_CHANGE_PASSWORD: `${API_PREFIX_CUSTOMER}/user/change-password`,
+  USER_REAL_NAME: `${API_PREFIX_CUSTOMER}/user/real-name`,
+  USER_REAL_NAME_UPDATE: `${API_PREFIX_CUSTOMER}/user/real-name/update`,
+  USER_AVATAR_UPLOAD: `${API_PREFIX_CUSTOMER}/user/avatar/upload`,
 
   // 店铺
   SHOP_LIST: `${API_PREFIX_CUSTOMER}/shop/list`,
@@ -56,6 +65,13 @@ export const CUSTOMER_API = {
   ORDER_UPDATE_ADDRESS: `${API_PREFIX_CUSTOMER}/order/updateAddress`,
   ORDER_UPDATE_REMARK: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/remark`,
   ORDER_UPDATE_PAYTYPE: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/paytype`,
+  ORDER_DELETE: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/delete`,
+  ORDER_DELIVERY: (id: number) => `${API_PREFIX_CUSTOMER}/order/${id}/delivery`,
+
+  // 支付相关
+  PAY_WECHAT: `${API_PREFIX_CUSTOMER}/wechat/pay`,
+  PAY_ALIPAY: `${API_PREFIX_CUSTOMER}/alipay/pay`,
+  PAY_WALLET: `${API_PREFIX_CUSTOMER}/wallet/pay`,
 
   // 购物车
   CART_GET: `${API_PREFIX_CUSTOMER}/cart`,

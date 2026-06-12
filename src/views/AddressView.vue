@@ -32,10 +32,14 @@ const editingAddress = ref<Address | null>(null)
 
 const goBack = () => {
   const orderNo = route.query.orderNo as string
-  if (orderNo) {
-    router.push({ path: '/order/detail', query: { orderNo } })
+  const from = route.query.from as string
+
+  if (orderNo && from === 'payment') {
+    router.push({ path: '/payment/confirm', query: { orderNo, refresh: Date.now().toString() } })
+  } else if (orderNo) {
+    router.push({ path: '/order/detail', query: { orderNo, refresh: Date.now().toString() } })
   } else {
-    router.back()
+    router.push({ path: '/order/detail', query: { refresh: Date.now().toString() } })
   }
 }
 
@@ -54,27 +58,38 @@ const loadAddresses = async () => {
 const confirmSelection = async () => {
   const selected = addresses.value.find(a => a.id === selectedId.value)
   if (selected) {
+    console.log('confirmSelection: 已选择地址:', selected)
     sessionStorage.setItem('selectedAddress', JSON.stringify(selected))
-    
+
     const orderNo = route.query.orderNo as string
-    
+    const from = route.query.from as string
+
     if (orderNo) {
       try {
+        console.log('confirmSelection: 正在更新订单地址, orderNo:', orderNo, 'addressId:', selected.id)
         await orderApi.updateAddress({
           orderNo: parseInt(orderNo),
           addressId: selected.id
         })
+        console.log('confirmSelection: 地址更新成功')
         toast.success('地址已更新')
+
+        setTimeout(() => {
+          console.log('confirmSelection: 返回支付页面')
+          if (from === 'payment') {
+            router.push({ path: '/payment/confirm', query: { orderNo, refresh: Date.now().toString() } })
+          } else {
+            router.push({ path: `/order/detail/${orderNo}`, query: { refresh: Date.now().toString() } })
+          }
+        }, 100)
       } catch (error: any) {
-        console.error('更新订单地址失败:', error)
+        console.error('confirmSelection: 更新订单地址失败:', error)
         toast.error('更新订单地址失败')
+        router.push({ path: `/order/detail/${orderNo}`, query: { refresh: Date.now().toString() } })
       }
-    }
-    
-    if (orderNo) {
-      router.push({ path: '/order/detail', query: { orderNo } })
     } else {
-      router.push('/order/detail')
+      console.log('confirmSelection: 没有订单号，返回订单确认页面')
+      router.push({ path: '/order/detail', query: { refresh: Date.now().toString() } })
     }
   } else {
     toast.error('请选择收货地址')
@@ -104,10 +119,32 @@ const saveAddress = async () => {
   }
 
   try {
-    await addressApi.add(newAddress.value)
+    const result = await addressApi.add(newAddress.value)
     toast.success('添加成功')
     showAddModal.value = false
     await loadAddresses()
+    
+    if (isSelectMode.value) {
+      console.log('选择模式，尝试选中新建地址')
+      console.log('接口返回结果:', result)
+      
+      if (result && result.id) {
+        selectedId.value = result.id
+        console.log('使用接口返回的id:', result.id)
+      } else {
+        const newAddr = addresses.value.find(a => 
+          a.consignee === newAddress.value.consignee && 
+          a.phone === newAddress.value.phone
+        )
+        if (newAddr) {
+          selectedId.value = newAddr.id
+          console.log('通过姓名和电话找到地址:', newAddr.id)
+        } else {
+          console.log('没有找到新建的地址')
+        }
+      }
+      console.log('当前选中的地址ID:', selectedId.value)
+    }
   } catch (error: any) {
     console.error('添加地址失败:', error)
     toast.error('添加地址失败')
@@ -121,7 +158,7 @@ const openEditModal = (address: Address) => {
 
 const updateAddress = async () => {
   if (!editingAddress.value) return
-  
+
   if (!editingAddress.value.consignee || !editingAddress.value.phone || !editingAddress.value.detail) {
     toast.error('请填写完整信息')
     return
@@ -174,7 +211,7 @@ const getFullAddress = (address: Address) => {
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   isSelectMode.value = params.get('select') === 'true'
-  
+
   await loadAddresses()
 })
 </script>
@@ -211,7 +248,7 @@ onMounted(async () => {
           <div v-if="isSelectMode" class="select-radio" @click="selectedId = address.id">
             <div class="radio-inner" :class="{ checked: selectedId === address.id }"></div>
           </div>
-          
+
           <div class="address-content">
             <div class="address-header">
               <div class="user-info">

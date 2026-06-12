@@ -18,6 +18,7 @@ let closeTimer: ReturnType<typeof setTimeout> | null = null
 
 const navItems = [
   { path: '/', name: '首页', icon: '🏠' },
+  { path: '/shops', name: '所有商家', icon: '🏪' },
   { path: '/cart', name: '购物车', icon: '🛒' },
   { path: '/order', name: '我的订单', icon: '📋' }
 ]

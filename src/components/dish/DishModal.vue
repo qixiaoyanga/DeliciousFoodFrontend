@@ -135,7 +135,7 @@ const addToCart = async () => {
       shopId: props.dish.shopId,
       dishId: props.dish.id,
       quantity: 1,
-      specId: selectedSpec.value?.dishId,
+      specId: selectedSpec.value?.id,
       attributeOptionIds: attributeOptionIds.length > 0 ? attributeOptionIds : undefined
     })
 

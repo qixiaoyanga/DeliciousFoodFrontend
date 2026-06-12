@@ -79,14 +79,13 @@ onMounted(() => {
 })
 
 const groupedItems = computed(() => {
-  const groups: Record<number, { shopName: string; delivery: number; boxFee: number; items: CartItem[] }> = {}
+  const groups: Record<number, { shopName: string; delivery: number; items: CartItem[] }> = {}
   cart.items.value.forEach(item => {
     const key = item.shopId
     if (!groups[key]) {
       groups[key] = {
         shopName: item.shopName || '',
         delivery: item.shopDelivery || 0,
-        boxFee: item.boxPrice || 0,
         items: []
       }
     }
@@ -123,15 +122,7 @@ const selectedDelivery = computed(() => {
 })
 
 const selectedBoxFee = computed(() => {
-  const shopIds = new Set(selectedItems.value.map(item => item.shopId))
-  let totalBoxFee = 0
-  shopIds.forEach(shopId => {
-    const group = groupedItems.value[shopId]
-    if (group && group.items.some(item => item.selected)) {
-      totalBoxFee += group.boxFee
-    }
-  })
-  return totalBoxFee
+  return 0
 })
 
 const allSelected = computed(() => {
@@ -204,8 +195,9 @@ const handleCheckout = () => {
     alert('请先选择要结算的商品')
     return
   }
-  const selectedCartIds = selectedItems.value.map(item => item.id).join(',')
-  router.push({ path: '/order/detail', query: { cartIds: selectedCartIds } })
+  const selectedCartIds = selectedItems.value.map(item => item.id)
+  sessionStorage.setItem('checkoutCartIds', JSON.stringify(selectedCartIds))
+  router.push({ path: '/order/detail' })
 }
 
 const goShopping = () => {
@@ -270,7 +262,6 @@ const goShopping = () => {
               <span class="shop-icon">🏪</span>
               <span class="shop-name">{{ group.shopName || '店铺 ' + shopId }}</span>
   <span class="shop-delivery">配送费: ¥{{ group.delivery.toFixed(2) }}</span>
-              <span class="shop-box-fee">打包费: ¥{{ group.boxFee.toFixed(2) }}</span>
             </div>
 
             <div class="item-list">
@@ -307,29 +298,33 @@ const goShopping = () => {
                   </div>
 
                   <div class="item-footer">
-                    <div class="item-price">
-                      <span class="sales-price">¥{{ (item.totalPrice || item.salesPrice).toFixed(2) }}</span>
-                      <span v-if="item.price > (item.totalPrice || item.salesPrice)" class="original-price">
-                        ¥{{ item.price.toFixed(2) }}
-                      </span>
-                    </div>
+                      <div class="item-price">
+                        <span class="sales-price">¥{{ (item.totalPrice || item.salesPrice).toFixed(2) }}</span>
+                        <span v-if="item.price > (item.totalPrice || item.salesPrice)" class="original-price">
+                          ¥{{ item.price.toFixed(2) }}
+                        </span>
+                      </div>
 
-                    <div class="quantity-control">
-                      <button
-                        class="qty-btn qty-minus"
-                        @click="handleQuantityChange(item.id, -1)"
-                      >
-                        -
-                      </button>
-                      <span class="qty-value">{{ item.quantity }}</span>
-                      <button
-                        class="qty-btn qty-plus"
-                        @click="handleQuantityChange(item.id, 1)"
-                      >
-                        +
-                      </button>
+                      <div class="item-box-fee">
+                        <span class="box-fee-value">（含打包费 ¥{{ (item.boxPrice || 0).toFixed(2) }}）</span>
+                      </div>
+
+                      <div class="quantity-control">
+                        <button
+                          class="qty-btn qty-minus"
+                          @click="handleQuantityChange(item.id, -1)"
+                        >
+                          -
+                        </button>
+                        <span class="qty-value">{{ item.quantity }}</span>
+                        <button
+                          class="qty-btn qty-plus"
+                          @click="handleQuantityChange(item.id, 1)"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                  </div>
                 </div>
 
                 <button
@@ -357,10 +352,7 @@ const goShopping = () => {
             <span class="summary-label">配送费</span>
             <span class="summary-value">¥{{ selectedDelivery.toFixed(2) }}</span>
           </div>
-          <div class="summary-row">
-            <span class="summary-label">打包费</span>
-            <span class="summary-value">¥{{ selectedBoxFee.toFixed(2) }}</span>
-          </div>
+
           <div class="summary-row total">
   <span class="summary-label">合计</span>
             <span class="summary-value">¥{{ (selectedTotalPrice + selectedDelivery + selectedBoxFee).toFixed(2) }}</span>
@@ -749,6 +741,16 @@ const goShopping = () => {
   font-size: 13px;
   color: var(--text-muted);
   text-decoration: line-through;
+}
+
+.item-box-fee {
+  display: flex;
+  align-items: center;
+}
+
+.box-fee-value {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .quantity-control {

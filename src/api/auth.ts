@@ -26,13 +26,15 @@ export interface LoginResult {
 
 export interface RegisterParams {
   username: string
+  phone: string
+  email: string
+  birthday: string
   encryptedData: string
-  nickname?: string
+  timestamp?: string
+  nonce?: string
 }
 
-export interface PublicKeyResult {
-  publicKey: string
-}
+export type PublicKeyResult = string
 
 export interface RefreshTokenParams {
   fingerprint: string
@@ -45,7 +47,8 @@ export interface RefreshTokenResult {
 
 export const authApi = {
   async getPublicKey(): Promise<PublicKeyResult> {
-    return await http.get<PublicKeyResult>(CUSTOMER_API.PUBLIC_KEY, {}, { showError: false })
+    const result = await http.get<string>(CUSTOMER_API.PUBLIC_KEY, {}, { showError: false })
+    return result
   },
 
   async login(data: LoginParams): Promise<LoginResult> {

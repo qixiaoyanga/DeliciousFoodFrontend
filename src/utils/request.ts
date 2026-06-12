@@ -265,17 +265,19 @@ const request = async <T = any>(config: RequestConfig): Promise<T> => {
     config
   )
 
+  const isFormData = finalConfig.data instanceof FormData
+
   const fetchOptions: RequestInit = {
     method: finalConfig.method || method,
     headers: {
-      'Content-Type': 'application/json',
+      ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...finalConfig.headers
     },
     credentials: 'include'
   }
 
   if (finalConfig.data && (finalConfig.method || method) !== 'GET') {
-    fetchOptions.body = JSON.stringify(finalConfig.data)
+    fetchOptions.body = isFormData ? finalConfig.data : JSON.stringify(finalConfig.data)
   }
 
   const controller = new AbortController()
