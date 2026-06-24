@@ -133,6 +133,24 @@ const routes: RouteRecordRaw[] = [
     name: 'admin',
     component: () => import('@/views/AdminView.vue'),
     meta: { showNavFooter: false }
+  },
+  {
+    path: '/delivery/login',
+    name: 'deliveryLogin',
+    component: () => import('@/views/DeliveryLoginView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/delivery/register',
+    name: 'deliveryRegister',
+    component: () => import('@/views/DeliveryRegisterView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/delivery',
+    name: 'delivery',
+    component: () => import('@/views/DeliveryView.vue'),
+    meta: { showNavFooter: false }
   }
 ]
 

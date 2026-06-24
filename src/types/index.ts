@@ -289,3 +289,49 @@ export interface PageVO<T> {
   current: number
   size: number
 }
+
+// ==================== 骑手端类型 ====================
+
+export interface DeliveryInfo {
+  id: string
+  phone: string
+  email: string
+  realName: string
+  idCard: string
+  balance: number
+  status: number
+  registerTime: string
+  lastLoginTime: string | null
+}
+
+export interface DeliveryOrder {
+  id: number
+  orderNo: number
+  address: string
+  shopName: string
+  shopAddress: string
+  deliveryFee: number
+  actualAmount: number
+  status: number
+  remark: string | null
+  createTime: string
+}
+
+export interface DeliveryDashboard {
+  todayCompleted: number
+  todayIncome: number
+  totalCompleted: number
+  totalIncome: number
+  pendingOrders: number
+  deliveringOrders: number
+  weekCompleted: number[]
+  weekIncome: number[]
+  weekLabels: string[]
+}
+
+export interface DeliveryLoginInfo {
+  accessToken: string
+  id: string
+  phone: string
+  realName: string
+}

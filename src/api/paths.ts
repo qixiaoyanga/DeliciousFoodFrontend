@@ -158,10 +158,31 @@ export const ADMIN_API = {
   DELIVERY_ADMIN_STATUS: (id: string | number) => `${API_PREFIX_ADMIN}/delivery/${id}/status`
 } as const
 
+// ==================== 骑手端API路径 ====================
+
+export const DELIVERY_API = {
+  // 认证
+  DELIVERY_LOGIN: `/delivery/login`,
+  DELIVERY_REGISTER: `/delivery/register`,
+  DELIVERY_LOGOUT: `/delivery/logout`,
+
+  // 订单
+  DELIVERY_ORDER_AVAILABLE: `/delivery/order/available`,
+  DELIVERY_ORDER_ACCEPT: (id: number) => `/delivery/order/${id}/accept`,
+  DELIVERY_ORDER_COMPLETE: (id: number) => `/delivery/order/${id}/complete`,
+  DELIVERY_ORDER_LIST: `/delivery/order/list`,
+
+  // 个人信息
+  DELIVERY_INFO: `/delivery/info`,
+  DELIVERY_INFO_UPDATE: `/delivery/info/update`,
+  DELIVERY_DASHBOARD: `/delivery/dashboard`
+} as const
+
 export default {
   CUSTOMER: CUSTOMER_API,
   MERCHANT: MERCHANT_API,
   ADMIN: ADMIN_API,
+  DELIVERY: DELIVERY_API,
   PREFIX: {
     CUSTOMER: API_PREFIX_CUSTOMER,
     MERCHANT: API_PREFIX_MERCHANT,

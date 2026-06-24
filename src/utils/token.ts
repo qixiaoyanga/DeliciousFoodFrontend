@@ -5,7 +5,7 @@ import { toast } from './toast'
 import { CUSTOMER_API, MERCHANT_API } from '@/api/paths'
 import type { User } from '@/types'
 
-export type UserType = 'customer' | 'merchant' | 'admin'
+export type UserType = 'customer' | 'merchant' | 'admin' | 'delivery'
 
 // Token状态
 interface TokenState {
@@ -33,6 +33,7 @@ const publishTokenRefresh = (token: string) => {
 
 const MERCHANT_TOKEN_KEY = 'delicious_merchant_token'
 const ADMIN_TOKEN_KEY = 'delicious_admin_token'
+const DELIVERY_TOKEN_KEY = 'delicious_delivery_token'
 
 // Token管理类
 class TokenManager {
@@ -74,6 +75,15 @@ class TokenManager {
           userType
         }
         localStorage.setItem(ADMIN_TOKEN_KEY, JSON.stringify(adminData))
+      } else if (userType === 'delivery') {
+        const deliveryData = {
+          accessToken,
+          user,
+          refreshToken,
+          expireTime,
+          userType
+        }
+        localStorage.setItem(DELIVERY_TOKEN_KEY, JSON.stringify(deliveryData))
       }
     }
   }
@@ -162,6 +172,25 @@ class TokenManager {
     return false
   }
 
+  // 从localStorage加载骑手token
+  loadDeliveryToken(): boolean {
+    try {
+      const data = localStorage.getItem(DELIVERY_TOKEN_KEY)
+      if (data) {
+        const parsed = JSON.parse(data)
+        this.accessToken = parsed.accessToken || null
+        this.user = parsed.user || null
+        this.refreshToken = parsed.refreshToken || null
+        this.expireTime = parsed.expireTime || null
+        this.userType = parsed.userType || 'delivery'
+        return true
+      }
+    } catch {
+      localStorage.removeItem(DELIVERY_TOKEN_KEY)
+    }
+    return false
+  }
+
   // 清除Token（内存）- HttpOnly Cookie由后端在logout时清除
   clearTokens() {
     this.accessToken = null
@@ -171,6 +200,7 @@ class TokenManager {
     this.userType = null
     localStorage.removeItem(MERCHANT_TOKEN_KEY)
     localStorage.removeItem(ADMIN_TOKEN_KEY)
+    localStorage.removeItem(DELIVERY_TOKEN_KEY)
   }
 
   // 刷新Token（显示错误信息）
@@ -282,9 +312,15 @@ export const autoLogin = async (): Promise<boolean> => {
   const isMerchantPage = pathname.startsWith('/merchant') && !isMerchantLoginPage
   const isAdminLoginPage = pathname === '/admin/login'
   const isAdminPage = pathname.startsWith('/admin') && !isAdminLoginPage
+  const isDeliveryLoginPage = pathname === '/delivery/login'
+  const isDeliveryPage = pathname.startsWith('/delivery') && !isDeliveryLoginPage
 
   if (tokenManager.getAccessToken() && !tokenManager.isTokenExpired()) {
     return true
+  }
+
+  if (isDeliveryPage) {
+    return tokenManager.loadDeliveryToken()
   }
 
   if (isAdminPage) {

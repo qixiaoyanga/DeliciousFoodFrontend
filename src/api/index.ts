@@ -17,3 +17,5 @@ export { addressApi } from './address'
 export { merchantApi, merchantShopApi, merchantDishApi, merchantOrderApi } from './merchant'
 
 export { adminAuthApi, adminDashboardApi, adminUserApi, adminShopApi, adminDeliveryApi } from './admin'
+
+export { deliveryAuthApi, deliveryOrderApi, deliveryInfoApi } from './delivery'
