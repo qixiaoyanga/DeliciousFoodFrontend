@@ -146,12 +146,13 @@ export const ADMIN_API = {
   // 用户管理
   USER_ADMIN_LIST: `${API_PREFIX_ADMIN}/user/list`,
   USER_ADMIN_STATUS: `${API_PREFIX_ADMIN}/user/status`,
+  USER_ADMIN_PROFILE: (id: string | number) => `${API_PREFIX_ADMIN}/user/${id}/profile`,
 
   // 商家管理
   SHOP_ADMIN_LIST: `${API_PREFIX_ADMIN}/shop/list`,
-  SHOP_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}`,
-  SHOP_ADMIN_AUDIT: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}/audit`,
-  SHOP_ADMIN_STATUS: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}/status`,
+  SHOP_ADMIN_DETAIL: (id: string | number) => `${API_PREFIX_ADMIN}/shop/${id}`,
+  SHOP_ADMIN_AUDIT: (id: string | number) => `${API_PREFIX_ADMIN}/shop/${id}/audit`,
+  SHOP_ADMIN_STATUS: (id: string | number) => `${API_PREFIX_ADMIN}/shop/${id}/status`,
 
   // 骑手管理
   DELIVERY_ADMIN_LIST: `${API_PREFIX_ADMIN}/delivery/list`,

@@ -230,7 +230,7 @@ export interface AdminUser {
 }
 
 export interface AdminShop {
-  id: number
+  id: string
   name: string
   logo: string
   description: string
@@ -262,21 +262,21 @@ export interface AdminDelivery {
 }
 
 export interface AdminDashboard {
-  totalUsers: number
-  totalMerchants: number
-  totalOrders: number
+  totalUsers: string
+  totalMerchants: string
+  totalOrders: string
   totalRevenue: number
-  todayNewUsers: number
-  todayNewOrders: number
-  pendingAuditShops: number
-  userGrowth: number[]
-  orderTrend: number[]
+  todayNewUsers: string
+  todayNewOrders: string
+  pendingAuditShops: string
+  userGrowth: string[]
+  orderTrend: string[]
   weekLabels: string[]
 }
 
 export interface AdminLoginInfo {
   accessToken: string
-  id: number
+  id: string
   username: string
   role: number
   phone: string
@@ -284,10 +284,10 @@ export interface AdminLoginInfo {
 
 export interface PageVO<T> {
   records: T[]
-  total: number
-  pages: number
-  current: number
-  size: number
+  total: string
+  pages: string
+  current: string
+  size: string
 }
 
 // ==================== 骑手端类型 ====================
@@ -337,4 +337,43 @@ export interface DeliveryLoginInfo {
   id: string
   phone: string
   realName: string
+}
+
+// ==================== 用户画像类型 ====================
+
+export interface UserProfile {
+  id: number
+  userId: number
+  totalOrders: number
+  totalAmount: number
+  avgOrderAmount: number
+  maxOrderAmount: number
+  minOrderAmount: number
+  monthlyOrders: number
+  weeklyOrders: number
+  lastOrderTime: string | null
+  daysSinceLastOrder: number
+  breakfastRatio: number
+  lunchRatio: number
+  dinnerRatio: number
+  nightSnackRatio: number
+  weekdayRatio: number
+  weekendRatio: number
+  favoriteCategories: string | null
+  favoriteDishes: string | null
+  favoriteShops: string | null
+  spicyPreference: number
+  sweetPreference: number
+  avgDeliveryTime: number
+  cancelRate: number
+  commentRate: number
+  refundRate: number
+  consumptionLevel: string
+  frequencyLevel: string
+  userTags: string | null
+  recencyScore: number
+  frequencyScore: number
+  monetaryScore: number
+  rfmSegment: string
+  firstOrderTime: string | null
 }

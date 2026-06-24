@@ -2,7 +2,7 @@
 
 import { http } from '@/utils/request'
 import { ADMIN_API } from './paths'
-import type { AdminUser, AdminShop, AdminDelivery, AdminDashboard, AdminLoginInfo, PageVO } from '@/types'
+import type { AdminUser, AdminShop, AdminDelivery, AdminDashboard, AdminLoginInfo, PageVO, UserProfile } from '@/types'
 
 // 管理端认证API
 export const adminAuthApi = {
@@ -35,6 +35,11 @@ export const adminUserApi = {
   // 切换用户状态（通过手机号）
   updateStatus: (phone: string, status: number) => {
     return http.put(ADMIN_API.USER_ADMIN_STATUS, { phone, status })
+  },
+
+  // 获取用户画像
+  getProfile: (id: string | number) => {
+    return http.get<UserProfile>(ADMIN_API.USER_ADMIN_PROFILE(id))
   }
 }
 
@@ -46,18 +51,18 @@ export const adminShopApi = {
   },
 
   // 获取商家详情
-  getDetail: (id: number) => {
-    return http.get<AdminShop>(ADMIN_API.SHOP_ADMIN_DETAIL(id))
+  getDetail: (id: string | number) => {
+    return http.get<AdminShop>(ADMIN_API.SHOP_ADMIN_DETAIL(Number(id)))
   },
 
   // 审核商家
-  audit: (id: number, data: { shopId: number; auditStatus: number; rejectReason?: string }) => {
-    return http.put(ADMIN_API.SHOP_ADMIN_AUDIT(id), data)
+  audit: (id: string | number, data: { shopId: string | number; auditStatus: number; rejectReason?: string }) => {
+    return http.put(ADMIN_API.SHOP_ADMIN_AUDIT(Number(id)), data)
   },
 
   // 切换商家状态
-  updateStatus: (id: number, status: number) => {
-    return http.put(ADMIN_API.SHOP_ADMIN_STATUS(id), { id, status })
+  updateStatus: (id: string | number, status: number) => {
+    return http.put(ADMIN_API.SHOP_ADMIN_STATUS(Number(id)), { id: Number(id), status })
   }
 }
 

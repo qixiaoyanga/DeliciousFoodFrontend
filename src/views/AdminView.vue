@@ -69,7 +69,7 @@ const updateCharts = () => {
         name: '总用户数',
         type: 'line',
         smooth: true,
-        data: dashboardInfo.value.userGrowth,
+        data: dashboardInfo.value.userGrowth.map(Number),
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: 'rgba(52, 152, 219, 0.3)' },
@@ -91,7 +91,7 @@ const updateCharts = () => {
       series: [{
         name: '订单数',
         type: 'bar',
-        data: dashboardInfo.value.orderTrend,
+        data: dashboardInfo.value.orderTrend.map(Number),
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: '#ff6b35' },
@@ -116,6 +116,8 @@ const userKeyword = ref('')
 const userStatusFilter = ref<number | undefined>(undefined)
 const showUserDetailModal = ref(false)
 const currentUserDetail = ref<AdminUser | null>(null)
+const userProfile = ref<any>(null)
+const profileLoading = ref(false)
 
 const loadUserList = async () => {
   isLoading.value = true
@@ -155,10 +157,29 @@ const updateUserStatus = async (user: AdminUser, newStatus: number) => {
   }
 }
 
-const viewUserDetail = (user: AdminUser) => {
+const viewUserDetail = async (user: AdminUser) => {
   currentUserDetail.value = user
   showUserDetailModal.value = true
+  userProfile.value = null
+  profileLoading.value = true
+  try {
+    userProfile.value = await adminUserApi.getProfile(user.uid)
+  } catch {
+    userProfile.value = null
+  } finally {
+    profileLoading.value = false
+  }
 }
+
+const getLevelText = (level: string) => {
+  const map: Record<string, string> = { LOW: '低消费', MEDIUM: '中等', HIGH: '高消费', VIP: 'VIP' }
+  return map[level] || level || '-'
+}
+const getFreqText = (freq: string) => {
+  const map: Record<string, string> = { OCCASIONAL: '偶尔', REGULAR: '规律', FREQUENT: '频繁' }
+  return map[freq] || freq || '-'
+}
+const getRatioPercent = (ratio: number) => ratio != null ? (ratio * 100).toFixed(0) + '%' : '-'
 
 const getUserStatusText = (status: number) => {
   const map: Record<number, string> = { 0: '正常', 1: '注销', 2: '封禁' }
@@ -645,17 +666,17 @@ onMounted(() => {
 
           <!-- 分页 -->
           <div v-if="userPage.pages > 1" class="pagination">
-            <button class="page-btn" :disabled="userPage.current <= 1" @click="changeUserPage(userPage.current - 1)">上一页</button>
+            <button class="page-btn" :disabled="Number(userPage.current) <= 1" @click="changeUserPage(Number(userPage.current) - 1)">上一页</button>
             <button
-              v-for="p in getPageNumbers(userPage.current, userPage.pages)"
+              v-for="p in getPageNumbers(Number(userPage.current), Number(userPage.pages))"
               :key="p"
               class="page-btn"
-              :class="{ active: p === userPage.current }"
+              :class="{ active: p === Number(userPage.current) }"
               @click="changeUserPage(p)"
             >
               {{ p }}
             </button>
-            <button class="page-btn" :disabled="userPage.current >= userPage.pages" @click="changeUserPage(userPage.current + 1)">下一页</button>
+            <button class="page-btn" :disabled="Number(userPage.current) >= Number(userPage.pages)" @click="changeUserPage(Number(userPage.current) + 1)">下一页</button>
             <span class="page-info">共 {{ userPage.total }} 条</span>
           </div>
         </div>
@@ -768,17 +789,17 @@ onMounted(() => {
 
           <!-- 分页 -->
           <div v-if="shopPage.pages > 1" class="pagination">
-            <button class="page-btn" :disabled="shopPage.current <= 1" @click="changeShopPage(shopPage.current - 1)">上一页</button>
+            <button class="page-btn" :disabled="Number(shopPage.current) <= 1" @click="changeShopPage(Number(shopPage.current) - 1)">上一页</button>
             <button
-              v-for="p in getPageNumbers(shopPage.current, shopPage.pages)"
+              v-for="p in getPageNumbers(Number(shopPage.current), Number(shopPage.pages))"
               :key="p"
               class="page-btn"
-              :class="{ active: p === shopPage.current }"
+              :class="{ active: p === Number(shopPage.current) }"
               @click="changeShopPage(p)"
             >
               {{ p }}
             </button>
-            <button class="page-btn" :disabled="shopPage.current >= shopPage.pages" @click="changeShopPage(shopPage.current + 1)">下一页</button>
+            <button class="page-btn" :disabled="Number(shopPage.current) >= Number(shopPage.pages)" @click="changeShopPage(Number(shopPage.current) + 1)">下一页</button>
             <span class="page-info">共 {{ shopPage.total }} 条</span>
           </div>
         </div>
@@ -787,15 +808,6 @@ onMounted(() => {
         <div v-else-if="activeTab === 'delivery'" class="tab-content">
           <div class="section-header">
             <h3 class="section-title">骑手管理</h3>
-          </div>
-
-          <!-- 开发中提示 -->
-          <div class="dev-notice">
-            <span class="dev-icon">🚧</span>
-            <div class="dev-text">
-              <h4>骑手管理功能开发中</h4>
-              <p>以下为骑手数据的基础管理功能，更多功能（骑手审核、配送轨迹、绩效统计等）正在开发中</p>
-            </div>
           </div>
 
           <!-- 搜索和筛选 -->
@@ -871,18 +883,18 @@ onMounted(() => {
           </div>
 
           <!-- 分页 -->
-          <div v-if="deliveryPage.pages > 1" class="pagination">
-            <button class="page-btn" :disabled="deliveryPage.current <= 1" @click="changeDeliveryPage(deliveryPage.current - 1)">上一页</button>
+          <div v-if="Number(deliveryPage.pages) > 1" class="pagination">
+            <button class="page-btn" :disabled="Number(deliveryPage.current) <= 1" @click="changeDeliveryPage(Number(deliveryPage.current) - 1)">上一页</button>
             <button
-              v-for="p in getPageNumbers(deliveryPage.current, deliveryPage.pages)"
+              v-for="p in getPageNumbers(Number(deliveryPage.current), Number(deliveryPage.pages))"
               :key="p"
               class="page-btn"
-              :class="{ active: p === deliveryPage.current }"
+              :class="{ active: p === Number(deliveryPage.current) }"
               @click="changeDeliveryPage(p)"
             >
               {{ p }}
             </button>
-            <button class="page-btn" :disabled="deliveryPage.current >= deliveryPage.pages" @click="changeDeliveryPage(deliveryPage.current + 1)">下一页</button>
+            <button class="page-btn" :disabled="Number(deliveryPage.current) >= Number(deliveryPage.pages)" @click="changeDeliveryPage(Number(deliveryPage.current) + 1)">下一页</button>
             <span class="page-info">共 {{ deliveryPage.total }} 条</span>
           </div>
         </div>
@@ -984,52 +996,70 @@ onMounted(() => {
           <button class="modal-close" @click="showUserDetailModal = false">×</button>
         </div>
         <div v-if="currentUserDetail" class="modal-body">
+          <!-- 基本信息 -->
+          <h4 class="profile-section-title">基本信息</h4>
           <div class="detail-grid">
-            <div class="detail-item">
-              <span class="detail-label">用户ID</span>
-              <span class="detail-value">{{ currentUserDetail.uid }}</span>
+            <div class="detail-item"><span class="detail-label">用户ID</span><span class="detail-value">{{ currentUserDetail.uid }}</span></div>
+            <div class="detail-item"><span class="detail-label">用户名</span><span class="detail-value">{{ currentUserDetail.username }}</span></div>
+            <div class="detail-item"><span class="detail-label">手机号</span><span class="detail-value">{{ currentUserDetail.phone }}</span></div>
+            <div class="detail-item"><span class="detail-label">邮箱</span><span class="detail-value">{{ currentUserDetail.email || '-' }}</span></div>
+            <div class="detail-item"><span class="detail-label">真实姓名</span><span class="detail-value">{{ currentUserDetail.realName || '-' }}</span></div>
+            <div class="detail-item"><span class="detail-label">性别</span><span class="detail-value">{{ currentUserDetail.gender === 1 ? '男' : currentUserDetail.gender === 2 ? '女' : '未知' }}</span></div>
+            <div class="detail-item"><span class="detail-label">会员等级</span><span class="detail-value">{{ getMemberLevelText(currentUserDetail.memberLevel) }}</span></div>
+            <div class="detail-item"><span class="detail-label">余额</span><span class="detail-value">¥{{ (currentUserDetail.balance || 0).toFixed(2) }}</span></div>
+            <div class="detail-item"><span class="detail-label">状态</span><span class="detail-value">{{ getUserStatusText(currentUserDetail.status) }}</span></div>
+            <div class="detail-item"><span class="detail-label">注册时间</span><span class="detail-value">{{ currentUserDetail.registerTime || '-' }}</span></div>
+            <div class="detail-item"><span class="detail-label">最后登录</span><span class="detail-value">{{ currentUserDetail.lastLoginTime || '-' }}</span></div>
+          </div>
+
+          <!-- 用户画像 -->
+          <div v-if="userProfile" class="profile-section">
+            <h4 class="profile-section-title">用户画像</h4>
+            <!-- 概览标签 -->
+            <div class="profile-tags">
+              <span class="profile-tag level" :class="userProfile.consumptionLevel?.toLowerCase()">{{ getLevelText(userProfile.consumptionLevel) }}</span>
+              <span class="profile-tag freq" :class="userProfile.frequencyLevel?.toLowerCase()">{{ getFreqText(userProfile.frequencyLevel) }}</span>
+              <span class="profile-tag rfm">{{ userProfile.rfmSegment || '未知分群' }}</span>
+              <span v-if="userProfile.userTags" class="profile-tag tag">{{ userProfile.userTags }}</span>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">用户名</span>
-              <span class="detail-value">{{ currentUserDetail.username }}</span>
+            <!-- 消费统计 -->
+            <h5 class="profile-sub-title">消费统计</h5>
+            <div class="detail-grid">
+              <div class="detail-item"><span class="detail-label">总订单数</span><span class="detail-value">{{ userProfile.totalOrders }}</span></div>
+              <div class="detail-item"><span class="detail-label">累计消费</span><span class="detail-value">¥{{ (userProfile.totalAmount || 0).toFixed(2) }}</span></div>
+              <div class="detail-item"><span class="detail-label">平均客单价</span><span class="detail-value">¥{{ (userProfile.avgOrderAmount || 0).toFixed(2) }}</span></div>
+              <div class="detail-item"><span class="detail-label">最高订单</span><span class="detail-value">¥{{ (userProfile.maxOrderAmount || 0).toFixed(2) }}</span></div>
+              <div class="detail-item"><span class="detail-label">月均/周均</span><span class="detail-value">{{ userProfile.monthlyOrders }} / {{ userProfile.weeklyOrders }}</span></div>
+              <div class="detail-item"><span class="detail-label">距上次下单</span><span class="detail-value">{{ userProfile.daysSinceLastOrder }}天</span></div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">手机号</span>
-              <span class="detail-value">{{ currentUserDetail.phone }}</span>
+            <!-- RFM 评分 -->
+            <h5 class="profile-sub-title">RFM 评分</h5>
+            <div class="rfm-bar">
+              <div class="rfm-item"><span class="rfm-label">R 近期</span><div class="rfm-dots"><span v-for="i in 5" :key="i" class="rfm-dot" :class="{ active: i <= userProfile.recencyScore }"></span></div></div>
+              <div class="rfm-item"><span class="rfm-label">F 频次</span><div class="rfm-dots"><span v-for="i in 5" :key="i" class="rfm-dot" :class="{ active: i <= userProfile.frequencyScore }"></span></div></div>
+              <div class="rfm-item"><span class="rfm-label">M 金额</span><div class="rfm-dots"><span v-for="i in 5" :key="i" class="rfm-dot" :class="{ active: i <= userProfile.monetaryScore }"></span></div></div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">邮箱</span>
-              <span class="detail-value">{{ currentUserDetail.email || '-' }}</span>
+            <!-- 时段偏好 -->
+            <h5 class="profile-sub-title">时段偏好</h5>
+            <div class="detail-grid">
+              <div class="detail-item"><span class="detail-label">早餐</span><span class="detail-value">{{ getRatioPercent(userProfile.breakfastRatio) }}</span></div>
+              <div class="detail-item"><span class="detail-label">午餐</span><span class="detail-value">{{ getRatioPercent(userProfile.lunchRatio) }}</span></div>
+              <div class="detail-item"><span class="detail-label">晚餐</span><span class="detail-value">{{ getRatioPercent(userProfile.dinnerRatio) }}</span></div>
+              <div class="detail-item"><span class="detail-label">夜宵</span><span class="detail-value">{{ getRatioPercent(userProfile.nightSnackRatio) }}</span></div>
+              <div class="detail-item"><span class="detail-label">工作日/周末</span><span class="detail-value">{{ getRatioPercent(userProfile.weekdayRatio) }} / {{ getRatioPercent(userProfile.weekendRatio) }}</span></div>
             </div>
-            <div class="detail-item">
-              <span class="detail-label">真实姓名</span>
-              <span class="detail-value">{{ currentUserDetail.realName || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">性别</span>
-              <span class="detail-value">{{ currentUserDetail.gender === 1 ? '男' : currentUserDetail.gender === 2 ? '女' : '未知' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">会员等级</span>
-              <span class="detail-value">{{ getMemberLevelText(currentUserDetail.memberLevel) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">余额</span>
-              <span class="detail-value">¥{{ (currentUserDetail.balance || 0).toFixed(2) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">状态</span>
-              <span class="detail-value">{{ getUserStatusText(currentUserDetail.status) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">注册时间</span>
-              <span class="detail-value">{{ currentUserDetail.registerTime || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">最后登录</span>
-              <span class="detail-value">{{ currentUserDetail.lastLoginTime || '-' }}</span>
+            <!-- 口味与行为 -->
+            <h5 class="profile-sub-title">口味与行为</h5>
+            <div class="detail-grid">
+              <div class="detail-item"><span class="detail-label">辣度偏好</span><span class="detail-value">{{ getRatioPercent(userProfile.spicyPreference) }}</span></div>
+              <div class="detail-item"><span class="detail-label">甜度偏好</span><span class="detail-value">{{ getRatioPercent(userProfile.sweetPreference) }}</span></div>
+              <div class="detail-item"><span class="detail-label">取消率</span><span class="detail-value">{{ getRatioPercent(userProfile.cancelRate) }}</span></div>
+              <div class="detail-item"><span class="detail-label">评价率</span><span class="detail-value">{{ getRatioPercent(userProfile.commentRate) }}</span></div>
+              <div class="detail-item"><span class="detail-label">退款率</span><span class="detail-value">{{ getRatioPercent(userProfile.refundRate) }}</span></div>
+              <div class="detail-item"><span class="detail-label">平均配送时长</span><span class="detail-value">{{ userProfile.avgDeliveryTime || 0 }}分钟</span></div>
             </div>
           </div>
+          <div v-else-if="profileLoading" class="profile-loading">加载画像中...</div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showUserDetailModal = false">关闭</button>
@@ -1811,6 +1841,27 @@ onMounted(() => {
 }
 
 /* ==================== 响应式 ==================== */
+/* ==================== 用户画像 ==================== */
+.profile-section { margin-top: 24px; padding-top: 20px; border-top: 2px solid var(--primary-color); }
+.profile-section-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0 0 16px; }
+.profile-sub-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color); }
+.profile-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.profile-tag { padding: 5px 14px; border-radius: 16px; font-size: 13px; font-weight: 600; }
+.profile-tag.level { background: #e8f5e9; color: #2e7d32; }
+.profile-tag.level.low { background: #fafafa; color: #9e9e9e; }
+.profile-tag.level.high { background: #fff3e0; color: #e65100; }
+.profile-tag.level.vip { background: #fce4ec; color: #c62828; }
+.profile-tag.freq { background: #e3f2fd; color: #1565c0; }
+.profile-tag.rfm { background: #f3e5f5; color: #7b1fa2; }
+.profile-tag.tag { background: #fff8e1; color: #f57f17; }
+.rfm-bar { margin: 12px 0; }
+.rfm-item { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.rfm-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); width: 50px; }
+.rfm-dots { display: flex; gap: 6px; }
+.rfm-dot { width: 14px; height: 14px; border-radius: 50%; background: #e0e0e0; }
+.rfm-dot.active { background: var(--primary-color); }
+.profile-loading { text-align: center; padding: 20px; color: var(--text-muted); }
+
 @media screen and (max-width: 1200px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
