@@ -2,7 +2,7 @@
 
 import { http } from '@/utils/request'
 import { ADMIN_API } from './paths'
-import type { AdminUser, AdminShop, AdminDelivery, AdminDashboard, AdminLoginInfo, PageVO, UserProfile } from '@/types'
+import type { AdminUser, AdminShop, AdminDelivery, AdminDashboard, AdminLoginInfo, AdminOrder, PageVO, UserProfile } from '@/types'
 
 // 管理端认证API
 export const adminAuthApi = {
@@ -79,10 +79,21 @@ export const adminDeliveryApi = {
   }
 }
 
+// 管理端订单管理API
+export const adminOrderApi = {
+  getList: (params: { page: number; size: number; keyword?: string; status?: number }) => {
+    return http.get<PageVO<AdminOrder>>(ADMIN_API.ORDER_ADMIN_LIST, params)
+  },
+  getDetail: (id: number) => {
+    return http.get<AdminOrder>(ADMIN_API.ORDER_ADMIN_DETAIL(id))
+  }
+}
+
 export default {
   auth: adminAuthApi,
   dashboard: adminDashboardApi,
   user: adminUserApi,
   shop: adminShopApi,
-  delivery: adminDeliveryApi
+  delivery: adminDeliveryApi,
+  order: adminOrderApi
 }

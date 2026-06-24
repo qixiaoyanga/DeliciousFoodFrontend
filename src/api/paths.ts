@@ -156,7 +156,11 @@ export const ADMIN_API = {
 
   // 骑手管理
   DELIVERY_ADMIN_LIST: `${API_PREFIX_ADMIN}/delivery/list`,
-  DELIVERY_ADMIN_STATUS: (id: string | number) => `${API_PREFIX_ADMIN}/delivery/${id}/status`
+  DELIVERY_ADMIN_STATUS: (id: string | number) => `${API_PREFIX_ADMIN}/delivery/${id}/status`,
+
+  // 订单管理
+  ORDER_ADMIN_LIST: `${API_PREFIX_ADMIN}/order/list`,
+  ORDER_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/order/${id}`
 } as const
 
 // ==================== 骑手端API路径 ====================

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { adminAuthApi, adminDashboardApi, adminUserApi, adminShopApi, adminDeliveryApi } from '@/api/admin'
+import { adminAuthApi, adminDashboardApi, adminUserApi, adminShopApi, adminDeliveryApi, adminOrderApi } from '@/api/admin'
+import type { AdminOrder } from '@/types'
 import { tokenManager } from '@/utils/token'
 import { toast } from '@/utils/toast'
 import * as echarts from 'echarts'
@@ -354,6 +355,63 @@ const getDeliveryStatusText = (status: number) => {
   return map[status] || '未知'
 }
 
+// ==================== 订单管理 ====================
+const orderList = ref<AdminOrder[]>([])
+const orderPage = ref({ current: '1', size: '10', total: '0', pages: '0' })
+const orderKeyword = ref('')
+const orderStatusFilter = ref<number | undefined>(undefined)
+const showOrderDetailModal = ref(false)
+const currentOrderDetail = ref<AdminOrder | null>(null)
+
+const loadOrderList = async () => {
+  isLoading.value = true
+  try {
+    const result = await adminOrderApi.getList({
+      page: Number(orderPage.value.current),
+      size: Number(orderPage.value.size),
+      keyword: orderKeyword.value || undefined,
+      status: orderStatusFilter.value
+    })
+    if (result) {
+      orderList.value = result.records
+      orderPage.value = { current: String(result.current), size: String(result.size), total: String(result.total), pages: String(result.pages) }
+    }
+  } catch (error: any) {
+    toast.error(error.message || '加载订单列表失败')
+  } finally { isLoading.value = false }
+}
+
+const searchOrders = () => { orderPage.value.current = '1'; loadOrderList() }
+
+const viewOrderDetail = async (order: AdminOrder) => {
+  try {
+    const detail = await adminOrderApi.getDetail(Number(order.id))
+    currentOrderDetail.value = detail
+    showOrderDetailModal.value = true
+  } catch { toast.error('获取订单详情失败') }
+}
+
+const getPayMethodText = (m: number) => ({ 1: '微信', 2: '支付宝', 3: '钱包' } as Record<number, string>)[m] || '未知'
+const getOrderStatusTextAdmin = (status: number) => {
+  const map: Record<number, string> = { 1: '待支付', 2: '待接单', 3: '备货中', 4: '配送中', 5: '已送达', 6: '已取消', 7: '退款中', 8: '已完成' }
+  return map[status] || '未知'
+}
+const getOrderStatusClassAdmin = (status: number) => {
+  if (status === 5 || status === 8) return 'status-completed'
+  if (status === 6) return 'status-canceled'
+  if (status === 7) return 'status-refunding'
+  return 'status-paid'
+}
+const changeOrderPage = (p: number) => { orderPage.value.current = String(p); loadOrderList() }
+
+// 图片URL
+const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious'
+const getImageUrl = (path: string | null | undefined): string => {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${SERVER_BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+}
+
 // ==================== Tab 切换 ====================
 const handleTabChange = (tab: string) => {
   activeTab.value = tab
@@ -365,6 +423,8 @@ const handleTabChange = (tab: string) => {
     loadShopList()
   } else if (tab === 'delivery') {
     loadDeliveryList()
+  } else if (tab === 'orders') {
+    loadOrderList()
   }
 }
 
@@ -461,6 +521,14 @@ onMounted(() => {
         >
           <span class="nav-icon">🛵</span>
           <span class="nav-text">骑手管理</span>
+        </button>
+        <button
+          class="nav-item"
+          :class="{ active: activeTab === 'orders' }"
+          @click="handleTabChange('orders')"
+        >
+          <span class="nav-icon">📋</span>
+          <span class="nav-text">订单管理</span>
         </button>
       </nav>
 
@@ -898,6 +966,50 @@ onMounted(() => {
             <span class="page-info">共 {{ deliveryPage.total }} 条</span>
           </div>
         </div>
+
+        <!-- ==================== 订单管理 ==================== -->
+        <div v-else-if="activeTab === 'orders'" class="tab-content">
+          <div class="section-header"><h3 class="section-title">订单管理</h3></div>
+          <div class="search-bar">
+            <div class="search-input-wrapper">
+              <input v-model="orderKeyword" type="text" class="search-input" placeholder="搜索订单号..." @keyup.enter="searchOrders" />
+              <button class="search-btn" @click="searchOrders">搜索</button>
+            </div>
+            <select v-model.number="orderStatusFilter" class="filter-select" @change="searchOrders">
+              <option :value="undefined">全部状态</option>
+              <option :value="1">待支付</option><option :value="2">待接单</option>
+              <option :value="3">备货中</option><option :value="4">配送中</option>
+              <option :value="5">已送达</option><option :value="6">已取消</option>
+              <option :value="7">退款中</option><option :value="8">已完成</option>
+            </select>
+          </div>
+          <div v-if="isLoading" class="loading-container"><div class="loading-spinner"></div><p>加载中...</p></div>
+          <div v-else class="table-wrapper">
+            <table class="data-table">
+              <thead><tr><th>订单号</th><th>用户</th><th>店铺</th><th>金额</th><th>支付方式</th><th>状态</th><th>骑手</th><th>时间</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr v-for="order in orderList" :key="order.id">
+                  <td>{{ order.orderNo }}</td>
+                  <td>{{ order.userName || '-' }}<br/><small>{{ order.userPhone }}</small></td>
+                  <td>{{ order.shopName || '-' }}</td>
+                  <td>¥{{ (order.actualAmount || 0).toFixed(2) }}</td>
+                  <td>{{ getPayMethodText(order.payMethod) }}</td>
+                  <td><span class="status-badge" :class="getOrderStatusClassAdmin(order.status)">{{ getOrderStatusTextAdmin(order.status) }}</span></td>
+                  <td>{{ order.deliveryName || '-' }}</td>
+                  <td>{{ order.createTime || '-' }}</td>
+                  <td><button class="action-btn-small" @click="viewOrderDetail(order)">详情</button></td>
+                </tr>
+                <tr v-if="orderList.length === 0"><td colspan="9" class="empty-row">暂无订单数据</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="Number(orderPage.pages) > 1" class="pagination">
+            <button class="page-btn" :disabled="Number(orderPage.current) <= 1" @click="changeOrderPage(Number(orderPage.current) - 1)">上一页</button>
+            <button v-for="p in getPageNumbers(Number(orderPage.current), Number(orderPage.pages))" :key="p" class="page-btn" :class="{ active: p === Number(orderPage.current) }" @click="changeOrderPage(p)">{{ p }}</button>
+            <button class="page-btn" :disabled="Number(orderPage.current) >= Number(orderPage.pages)" @click="changeOrderPage(Number(orderPage.current) + 1)">下一页</button>
+            <span class="page-info">共 {{ orderPage.total }} 条</span>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -975,6 +1087,14 @@ onMounted(() => {
             <div v-if="currentShop.description" class="detail-item full-width">
               <span class="detail-label">店铺描述</span>
               <span class="detail-value">{{ currentShop.description }}</span>
+            </div>
+            <div v-if="currentShop.businessLicense" class="detail-item full-width">
+              <span class="detail-label">营业执照</span>
+              <img :src="getImageUrl(currentShop.businessLicense)" class="license-img" @click="window.open(getImageUrl(currentShop.businessLicense))" title="点击查看大图" />
+            </div>
+            <div v-if="currentShop.foodLicense" class="detail-item full-width">
+              <span class="detail-label">食品经营许可证</span>
+              <img :src="getImageUrl(currentShop.foodLicense)" class="license-img" @click="window.open(getImageUrl(currentShop.foodLicense))" title="点击查看大图" />
             </div>
             <div v-if="currentShop.rejectReason" class="detail-item full-width">
               <span class="detail-label">驳回原因</span>
@@ -1063,6 +1183,35 @@ onMounted(() => {
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="showUserDetailModal = false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 订单详情弹窗 ==================== -->
+    <div v-if="showOrderDetailModal" class="modal-overlay" @click.self="showOrderDetailModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>订单详情</h3>
+          <button class="modal-close" @click="showOrderDetailModal = false">×</button>
+        </div>
+        <div v-if="currentOrderDetail" class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">订单号</span><span class="detail-value">{{ currentOrderDetail.orderNo }}</span></div>
+            <div class="detail-item"><span class="detail-label">订单状态</span><span class="detail-value">{{ getOrderStatusTextAdmin(currentOrderDetail.status) }}</span></div>
+            <div class="detail-item"><span class="detail-label">用户</span><span class="detail-value">{{ currentOrderDetail.userName || '-' }} ({{ currentOrderDetail.userPhone }})</span></div>
+            <div class="detail-item"><span class="detail-label">店铺</span><span class="detail-value">{{ currentOrderDetail.shopName || '-' }}</span></div>
+            <div class="detail-item"><span class="detail-label">总金额</span><span class="detail-value">¥{{ (currentOrderDetail.totalAmount || 0).toFixed(2) }}</span></div>
+            <div class="detail-item"><span class="detail-label">配送费</span><span class="detail-value">¥{{ (currentOrderDetail.deliveryFee || 0).toFixed(2) }}</span></div>
+            <div class="detail-item"><span class="detail-label">实付金额</span><span class="detail-value">¥{{ (currentOrderDetail.actualAmount || 0).toFixed(2) }}</span></div>
+            <div class="detail-item"><span class="detail-label">支付方式</span><span class="detail-value">{{ getPayMethodText(currentOrderDetail.payMethod) }}</span></div>
+            <div class="detail-item"><span class="detail-label">骑手</span><span class="detail-value">{{ currentOrderDetail.deliveryName || '未分配' }}</span></div>
+            <div class="detail-item"><span class="detail-label">创建时间</span><span class="detail-value">{{ currentOrderDetail.createTime || '-' }}</span></div>
+            <div class="detail-item"><span class="detail-label">支付时间</span><span class="detail-value">{{ currentOrderDetail.payTime || '-' }}</span></div>
+            <div v-if="currentOrderDetail.remark" class="detail-item full-width"><span class="detail-label">备注</span><span class="detail-value">{{ currentOrderDetail.remark }}</span></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showOrderDetailModal = false">关闭</button>
         </div>
       </div>
     </div>
@@ -1861,6 +2010,8 @@ onMounted(() => {
 .rfm-dot { width: 14px; height: 14px; border-radius: 50%; background: #e0e0e0; }
 .rfm-dot.active { background: var(--primary-color); }
 .profile-loading { text-align: center; padding: 20px; color: var(--text-muted); }
+.license-img { max-width: 100%; max-height: 260px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); cursor: pointer; object-fit: contain; margin-top: 4px; }
+.license-img:hover { border-color: var(--primary-color); box-shadow: var(--shadow-sm); }
 
 @media screen and (max-width: 1200px) {
   .stats-grid {

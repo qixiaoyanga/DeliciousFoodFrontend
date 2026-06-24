@@ -234,6 +234,8 @@ export interface AdminShop {
   name: string
   logo: string
   description: string
+  businessLicense: string | null
+  foodLicense: string | null
   ownerName: string
   ownerPhone: string
   auditStatus: number
@@ -247,6 +249,23 @@ export interface AdminShop {
   grade: number
   monthlySales: number
   createTime: string
+}
+
+export interface AdminOrder {
+  id: number
+  orderNo: string | number
+  userName: string
+  userPhone: string
+  shopName: string
+  totalAmount: number
+  deliveryFee: number
+  actualAmount: number
+  payMethod: number
+  status: number
+  deliveryName: string | null
+  remark: string | null
+  createTime: string
+  payTime: string | null
 }
 
 export interface AdminDelivery {
