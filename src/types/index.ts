@@ -307,7 +307,10 @@ export interface DeliveryInfo {
 export interface DeliveryOrder {
   id: number
   orderNo: number
-  address: string
+  consignee: string
+  consigneePhone: string
+  fullAddress: string
+  pickupCode: string | null
   shopName: string
   shopAddress: string
   deliveryFee: number

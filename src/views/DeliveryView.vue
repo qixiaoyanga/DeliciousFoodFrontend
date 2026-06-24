@@ -29,11 +29,15 @@ const loadAvailableOrders = async () => {
   }
 }
 
+const showPickupModal = ref(false)
+const currentPickupCode = ref('')
+
 const acceptOrder = async (order: DeliveryOrder) => {
   if (!confirm(`确认接单？\n店铺：${order.shopName}\n地址：${order.shopAddress}\n配送费：¥${order.deliveryFee.toFixed(2)}`)) return
   try {
-    await deliveryOrderApi.accept(order.id)
-    toast.success('接单成功！请前往配送')
+    const code = await deliveryOrderApi.accept(order.id)
+    currentPickupCode.value = code || '无'
+    showPickupModal.value = true
     loadAvailableOrders()
     loadMyOrders()
   } catch (error: any) {
@@ -237,7 +241,8 @@ onMounted(() => {
               <div class="order-card-body">
                 <div class="order-info-row"><span class="label">店铺：</span><span>{{ order.shopName }}</span></div>
                 <div class="order-info-row"><span class="label">店铺地址：</span><span>{{ order.shopAddress || '-' }}</span></div>
-                <div class="order-info-row"><span class="label">收货地址：</span><span>{{ order.address || '-' }}</span></div>
+                <div class="order-info-row"><span class="label">收货人：</span><span>{{ order.consignee || '-' }} {{ order.consigneePhone || '' }}</span></div>
+                <div class="order-info-row"><span class="label">收货地址：</span><span class="highlight">{{ order.fullAddress || '-' }}</span></div>
                 <div class="order-info-row" v-if="order.remark"><span class="label">备注：</span><span class="remark">{{ order.remark }}</span></div>
               </div>
               <div class="order-card-footer">
@@ -261,8 +266,10 @@ onMounted(() => {
               </div>
               <div class="order-card-body">
                 <div class="order-info-row"><span class="label">店铺：</span><span>{{ order.shopName }}</span></div>
-                <div class="order-info-row"><span class="label">收货地址：</span><span>{{ order.address || '-' }}</span></div>
+                <div class="order-info-row"><span class="label">收货人：</span><span>{{ order.consignee || '-' }} {{ order.consigneePhone || '' }}</span></div>
+                <div class="order-info-row"><span class="label">收货地址：</span><span class="highlight">{{ order.fullAddress || '-' }}</span></div>
                 <div class="order-info-row"><span class="label">配送费：</span><span class="highlight">¥{{ order.deliveryFee.toFixed(2) }}</span></div>
+                <div class="order-info-row" v-if="order.pickupCode"><span class="label">取件码：</span><span class="pickup-code">{{ order.pickupCode }}</span></div>
               </div>
               <div class="order-card-footer" v-if="order.status === 4">
                 <button class="complete-btn" @click="completeOrder(order)">确认送达</button>
@@ -316,6 +323,18 @@ onMounted(() => {
         </template>
       </div>
     </main>
+
+    <!-- 取件码弹窗 -->
+    <div v-if="showPickupModal" class="modal-overlay" @click.self="showPickupModal = false">
+      <div class="pickup-modal">
+        <div class="pickup-modal-icon">📦</div>
+        <h3>接单成功！</h3>
+        <p class="pickup-label">取件码</p>
+        <p class="pickup-code-display">{{ currentPickupCode }}</p>
+        <p class="pickup-tip">请向商家出示取件码</p>
+        <button class="pickup-close-btn" @click="showPickupModal = false">知道了</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -404,6 +423,17 @@ onMounted(() => {
 .chart-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); }
 .chart-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0 0 16px; }
 .chart-container { width: 100%; height: 300px; }
+
+.pickup-code { color: #f59e0b; font-weight: 700; font-size: 16px; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.pickup-modal { background: white; border-radius: var(--radius-lg); padding: 48px; text-align: center; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.pickup-modal-icon { font-size: 64px; margin-bottom: 16px; }
+.pickup-modal h3 { font-size: 20px; font-weight: 600; color: #22c55e; margin: 0 0 20px; }
+.pickup-label { font-size: 14px; color: var(--text-muted); margin: 0 0 8px; }
+.pickup-code-display { font-size: 42px; font-weight: 800; color: #f59e0b; letter-spacing: 8px; margin: 0 0 16px; font-family: monospace; }
+.pickup-tip { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
+.pickup-close-btn { padding: 12px 40px; background: #22c55e; color: white; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
+.pickup-close-btn:hover { background: #16a34a; }
 
 @media screen and (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 @media screen and (max-width: 768px) { .sidebar { display: none; } .main-content { margin-left: 0; } .stats-grid { grid-template-columns: 1fr; } .info-grid { grid-template-columns: 1fr; } }

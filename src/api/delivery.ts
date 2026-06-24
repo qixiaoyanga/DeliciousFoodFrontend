@@ -29,9 +29,9 @@ export const deliveryOrderApi = {
     return http.get<DeliveryOrder[]>(DELIVERY_API.DELIVERY_ORDER_AVAILABLE)
   },
 
-  // 接单
+  // 接单（返回取件码）
   accept: (id: number) => {
-    return http.post(DELIVERY_API.DELIVERY_ORDER_ACCEPT(id))
+    return http.post<string>(DELIVERY_API.DELIVERY_ORDER_ACCEPT(id))
   },
 
   // 完成配送
