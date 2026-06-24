@@ -94,8 +94,8 @@ export const CUSTOMER_API = {
 export const MERCHANT_API = {
   // 认证
   MERCHANT_LOGIN: `${API_PREFIX_MERCHANT}/login`,
-  MERCHANT_REGISTER: `${API_PREFIX_MERCHANT}/register`,
   MERCHANT_REFRESH: `${API_PREFIX_MERCHANT}/refresh`,
+  MERCHANT_REGISTER: `${API_PREFIX_MERCHANT}/register`,
   MERCHANT_LOGOUT: `${API_PREFIX_MERCHANT}/logout`,
 
   // 商家信息
@@ -105,20 +105,30 @@ export const MERCHANT_API = {
   // 店铺管理
   SHOP_MANAGE_INFO: `${API_PREFIX_MERCHANT}/shop/info`,
   SHOP_MANAGE_UPDATE: `${API_PREFIX_MERCHANT}/shop/update`,
+  SHOP_MANAGE_UPLOAD_LOGO: `${API_PREFIX_MERCHANT}/shop/upload/logo`,
+  SHOP_MANAGE_UPLOAD_BUSINESS_LICENSE: `${API_PREFIX_MERCHANT}/shop/upload/businessLicense`,
+  SHOP_MANAGE_UPLOAD_FOOD_LICENSE: `${API_PREFIX_MERCHANT}/shop/upload/foodLicense`,
 
   // 菜品管理
   DISH_MANAGE_LIST: `${API_PREFIX_MERCHANT}/dish/list`,
   DISH_MANAGE_ADD: `${API_PREFIX_MERCHANT}/dish/add`,
-  DISH_MANAGE_UPDATE: (id: number) => `${API_PREFIX_MERCHANT}/dish/${id}`,
-  DISH_MANAGE_DELETE: (id: number) => `${API_PREFIX_MERCHANT}/dish/${id}`,
-  DISH_MANAGE_STATUS: (id: number) => `${API_PREFIX_MERCHANT}/dish/${id}/status`,
+  DISH_MANAGE_UPDATE: `${API_PREFIX_MERCHANT}/dish/update`,
+  DISH_MANAGE_DELETE: `${API_PREFIX_MERCHANT}/dish/delete`,
+  DISH_MANAGE_STATUS: `${API_PREFIX_MERCHANT}/dish/status`,
+  DISH_MANAGE_UPLOAD: `${API_PREFIX_MERCHANT}/dish/upload`,
+
+  // 分类管理
+  CATEGORY_MANAGE_LIST: `${API_PREFIX_MERCHANT}/category/list`,
+  CATEGORY_MANAGE_ADD: `${API_PREFIX_MERCHANT}/category/add`,
+  CATEGORY_MANAGE_UPDATE: `${API_PREFIX_MERCHANT}/category/update`,
+  CATEGORY_MANAGE_DELETE: `${API_PREFIX_MERCHANT}/category/delete`,
 
   // 订单管理
   ORDER_MANAGE_LIST: `${API_PREFIX_MERCHANT}/order/list`,
   ORDER_MANAGE_DETAIL: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}`,
-  ORDER_MANAGE_ACCEPT: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}/accept`,
-  ORDER_MANAGE_REJECT: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}/reject`,
-  ORDER_MANAGE_COMPLETE: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}/complete`
+  ORDER_MANAGE_ACCEPT: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/accept`,
+  ORDER_MANAGE_REJECT: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/reject`,
+  ORDER_MANAGE_COMPLETE: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/complete`
 } as const
 
 // ==================== 管理端API路径（预留） ====================

@@ -112,7 +112,7 @@ export const authApi = {
         createTime: result.createTime
       }
       // 存储 accessToken 和 refreshToken（refreshToken 会自动存入 cookie）
-      tokenManager.setTokens(result.accessToken, user, result.refreshToken)
+      tokenManager.setTokens(result.accessToken, user, result.refreshToken, undefined, 'customer')
       return true
     } catch (error: any) {
       throw new Error(error.message || '登录失败，请重试')

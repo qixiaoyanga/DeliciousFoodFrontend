@@ -3,14 +3,38 @@ export interface Shop {
   name: string
   logo: string
   description?: string
-  grade: number
-  monthlySales: number
+  businessLicense?: string
+  foodLicense?: string
+  legalPersonName?: string
+  legalPersonIdCard?: string
+  shopFrontImg?: string
+  shopInteriorImg?: string
+  longitude?: number
+  latitude?: number
+  province?: string
+  city?: string
+  district?: string
+  address?: string
+  businessHours?: string
+  radius?: number
   delivery: number
   minOrderAmount: number
-  businessHours?: string
+  auditStatus?: number
+  rejectReason?: string | null
+  status: number
+  sort?: number
+  grade: number
+  monthlySales: number
+  totalSales?: number
+  tags?: number
+  ownerId?: number
+  shopStatus?: number
+  createTime?: string
+  updateTime?: string
 }
 
 export interface DishSpec {
+  id?: number
   dishId: number
   name: string
   price: number

@@ -37,7 +37,22 @@ export const merchantShopApi = {
 
   // 更新店铺信息
   update: (data: Partial<Shop>) => {
-    return http.put(MERCHANT_API.SHOP_MANAGE_UPDATE, data)
+    return http.post(MERCHANT_API.SHOP_MANAGE_UPDATE, data)
+  },
+
+  // 上传店铺logo
+  uploadLogo: (formData: FormData) => {
+    return http.post(MERCHANT_API.SHOP_MANAGE_UPLOAD_LOGO, formData)
+  },
+
+  // 上传营业执照
+  uploadBusinessLicense: (formData: FormData) => {
+    return http.post(MERCHANT_API.SHOP_MANAGE_UPLOAD_BUSINESS_LICENSE, formData)
+  },
+
+  // 上传食品许可证
+  uploadFoodLicense: (formData: FormData) => {
+    return http.post(MERCHANT_API.SHOP_MANAGE_UPLOAD_FOOD_LICENSE, formData)
   }
 }
 
@@ -54,18 +69,46 @@ export const merchantDishApi = {
   },
 
   // 更新菜品
-  update: (id: number, data: Partial<Dish>) => {
-    return http.put(MERCHANT_API.DISH_MANAGE_UPDATE(id), data)
+  update: (data: Partial<Dish>) => {
+    return http.post(MERCHANT_API.DISH_MANAGE_UPDATE, data)
   },
 
   // 删除菜品
   delete: (id: number) => {
-    return http.delete(MERCHANT_API.DISH_MANAGE_DELETE(id))
+    return http.post(MERCHANT_API.DISH_MANAGE_DELETE, { id })
   },
 
   // 更新菜品状态
   updateStatus: (id: number, status: number) => {
-    return http.put(MERCHANT_API.DISH_MANAGE_STATUS(id), { status })
+    return http.post(MERCHANT_API.DISH_MANAGE_STATUS, { id, status })
+  },
+
+  // 上传菜品图片
+  uploadImage: (formData: FormData) => {
+    return http.post(MERCHANT_API.DISH_MANAGE_UPLOAD, formData)
+  }
+}
+
+// 商家端分类管理API
+export const merchantCategoryApi = {
+  // 获取分类列表
+  getList: (params?: any) => {
+    return http.get(MERCHANT_API.CATEGORY_MANAGE_LIST, params)
+  },
+
+  // 添加分类
+  add: (data: Partial<DishCategory>) => {
+    return http.post(MERCHANT_API.CATEGORY_MANAGE_ADD, data)
+  },
+
+  // 更新分类
+  update: (data: Partial<DishCategory>) => {
+    return http.post(MERCHANT_API.CATEGORY_MANAGE_UPDATE, data)
+  },
+
+  // 删除分类
+  delete: (id: number) => {
+    return http.post(MERCHANT_API.CATEGORY_MANAGE_DELETE, { id })
   }
 }
 

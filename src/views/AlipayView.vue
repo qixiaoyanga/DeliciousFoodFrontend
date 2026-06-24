@@ -12,15 +12,21 @@ const isPaying = ref(false)
 const orderNo = ref(0)
 const payMethod = ref('2')
 let pollTimer: number | null = null
+let hasNavigated = false
 
 const checkPayStatus = async () => {
+  if (hasNavigated) return
+  
   try {
     const orders = await orderApi.getDetail(orderNo.value)
     if (Array.isArray(orders) && orders.length > 0) {
       const order = orders[0]
       if (order.status === 1) {
-        // 支付成功（待接单状态）
-        clearInterval(pollTimer!)
+        hasNavigated = true
+        if (pollTimer) {
+          clearInterval(pollTimer)
+          pollTimer = null
+        }
         router.replace({ 
           path: '/payment/success', 
           query: { orderNo: orderNo.value.toString(), payMethod: payMethod.value }

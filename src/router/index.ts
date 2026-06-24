@@ -103,6 +103,18 @@ const routes: RouteRecordRaw[] = [
     name: 'profile',
     component: () => import('@/views/PersonalCenterView.vue'),
     meta: { showNavFooter: true }
+  },
+  {
+    path: '/merchant/login',
+    name: 'merchantLogin',
+    component: () => import('@/views/MerchantLoginView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/merchant',
+    name: 'merchant',
+    component: () => import('@/views/MerchantView.vue'),
+    meta: { showNavFooter: false }
   }
 ]
 

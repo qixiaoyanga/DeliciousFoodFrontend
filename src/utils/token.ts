@@ -2,8 +2,10 @@
 import { http } from './request'
 import { generateDeviceFingerprint } from './crypto'
 import { toast } from './toast'
-import { CUSTOMER_API } from '@/api/paths'
+import { CUSTOMER_API, MERCHANT_API } from '@/api/paths'
 import type { User } from '@/types'
+
+export type UserType = 'customer' | 'merchant'
 
 // Token状态
 interface TokenState {
@@ -11,6 +13,7 @@ interface TokenState {
   refreshToken: string | null
   expireTime: number | null
   user: User | null
+  userType: UserType | null
 }
 
 // 刷新锁（防止并发刷新）
@@ -28,15 +31,18 @@ const publishTokenRefresh = (token: string) => {
   refreshSubscribers = []
 }
 
+const MERCHANT_TOKEN_KEY = 'delicious_merchant_token'
+
 // Token管理类
 class TokenManager {
   private accessToken: string | null = null
   private refreshToken: string | null = null
   private expireTime: number | null = null
   private user: User | null = null
+  private userType: UserType | null = null
 
   // 设置Token和用户信息（accessToken内存，refreshToken由后端通过HttpOnly Cookie管理）
-  setTokens(accessToken: string, user?: User, refreshToken?: string, expireTime?: number) {
+  setTokens(accessToken: string, user?: User, refreshToken?: string, expireTime?: number, userType?: UserType) {
     this.accessToken = accessToken
     if (user) {
       this.user = user
@@ -47,6 +53,48 @@ class TokenManager {
     if (expireTime) {
       this.expireTime = expireTime
     }
+    if (userType) {
+      this.userType = userType
+      if (userType === 'merchant') {
+        const merchantData = {
+          accessToken,
+          user,
+          refreshToken,
+          expireTime,
+          userType
+        }
+        localStorage.setItem(MERCHANT_TOKEN_KEY, JSON.stringify(merchantData))
+      }
+    }
+  }
+
+  // 从localStorage加载商家token
+  loadMerchantToken(): boolean {
+    try {
+      const data = localStorage.getItem(MERCHANT_TOKEN_KEY)
+      if (data) {
+        const parsed = JSON.parse(data)
+        this.accessToken = parsed.accessToken || null
+        this.user = parsed.user || null
+        this.refreshToken = parsed.refreshToken || null
+        this.expireTime = parsed.expireTime || null
+        this.userType = parsed.userType || 'merchant'
+        return true
+      }
+    } catch {
+      localStorage.removeItem(MERCHANT_TOKEN_KEY)
+    }
+    return false
+  }
+
+  // 获取用户类型
+  getUserType(): UserType | null {
+    return this.userType
+  }
+
+  // 设置用户类型
+  setUserType(userType: UserType) {
+    this.userType = userType
   }
 
   // 获取用户信息
@@ -91,6 +139,8 @@ class TokenManager {
     this.refreshToken = null
     this.expireTime = null
     this.user = null
+    this.userType = null
+    localStorage.removeItem(MERCHANT_TOKEN_KEY)
   }
 
   // 刷新Token（显示错误信息）
@@ -110,12 +160,13 @@ class TokenManager {
     isRefreshing = true
 
     try {
+      const refreshUrl = this.userType === 'merchant' ? MERCHANT_API.MERCHANT_REFRESH : CUSTOMER_API.REFRESH
       const result = await http.post<{
         accessToken: string
         refreshToken?: string
         code?: number
         message?: string
-      }>(CUSTOMER_API.REFRESH, {
+      }>(refreshUrl, {
         fingerprint: generateDeviceFingerprint()
       })
 
@@ -172,7 +223,8 @@ class TokenManager {
       accessToken: this.accessToken,
       refreshToken: this.refreshToken,
       expireTime: this.expireTime,
-      user: this.user
+      user: this.user,
+      userType: this.userType
     }
   }
 }
@@ -184,20 +236,29 @@ export const tokenManager = new TokenManager()
 export const getAccessToken = () => tokenManager.getAccessToken()
 export const getRefreshToken = () => tokenManager.getRefreshToken()
 export const getUser = () => tokenManager.getUser()
+export const getUserType = () => tokenManager.getUserType()
 export const setUser = (user: User) => tokenManager.setUser(user)
-export const setTokens = (accessToken: string, user?: User, refreshToken?: string) =>
-  tokenManager.setTokens(accessToken, user, refreshToken)
+export const setUserType = (userType: UserType) => tokenManager.setUserType(userType)
+export const setTokens = (accessToken: string, user?: User, refreshToken?: string, userType?: UserType) =>
+  tokenManager.setTokens(accessToken, user, refreshToken, undefined, userType)
 export const clearTokens = () => tokenManager.clearTokens()
 export const isTokenExpired = () => tokenManager.isTokenExpired()
 
 // 自动登录 - 通过refreshToken刷新获取新的accessToken
 export const autoLogin = async (): Promise<boolean> => {
-  const isLoginPage = window.location.pathname === '/login'
-  
+  const pathname = window.location.pathname
+  const isLoginPage = pathname === '/login'
+  const isMerchantLoginPage = pathname === '/merchant/login'
+  const isMerchantPage = pathname.startsWith('/merchant') && !isMerchantLoginPage
+
   if (tokenManager.getAccessToken() && !tokenManager.isTokenExpired()) {
     return true
   }
-  
+
+  if (isMerchantPage) {
+    return tokenManager.loadMerchantToken()
+  }
+
   try {
     const result = await http.post<{
       accessToken: string
@@ -234,7 +295,7 @@ export const autoLogin = async (): Promise<boolean> => {
         gender: result.gender,
         createTime: result.createTime
       }
-      tokenManager.setTokens(result.accessToken, user, result.refreshToken)
+      tokenManager.setTokens(result.accessToken, user, result.refreshToken, undefined, 'customer')
       return true
     }
     return false

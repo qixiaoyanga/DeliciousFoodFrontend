@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { orderApi } from '@/api'
 import { toast } from '@/utils/toast'
@@ -129,13 +129,17 @@ const goBack = () => {
 }
 
 let pollTimer: number | null = null
+let hasNavigated = false
 
 const checkPayStatus = async () => {
+  if (hasNavigated) return
+  
   try {
     const orders = await orderApi.getDetail(orderNo.value)
     if (Array.isArray(orders) && orders.length > 0) {
       const order = orders[0]
       if (order.status === 2 || order.status === 8) {
+        hasNavigated = true
         if (pollTimer) {
           clearInterval(pollTimer)
           pollTimer = null
@@ -226,6 +230,13 @@ const closeWalletModal = () => {
 
 onMounted(() => {
   loadPayData()
+})
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
 })
 </script>
 
