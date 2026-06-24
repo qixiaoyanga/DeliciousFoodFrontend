@@ -16,7 +16,7 @@ let hasNavigated = false
 
 const checkPayStatus = async () => {
   if (hasNavigated) return
-  
+
   try {
     const orders = await orderApi.getDetail(orderNo.value)
     if (Array.isArray(orders) && orders.length > 0) {
@@ -27,8 +27,8 @@ const checkPayStatus = async () => {
           clearInterval(pollTimer)
           pollTimer = null
         }
-        router.replace({ 
-          path: '/payment/success', 
+        router.replace({
+          path: '/payment/success',
           query: { orderNo: orderNo.value.toString(), payMethod: payMethod.value }
         })
       }
@@ -41,7 +41,7 @@ const checkPayStatus = async () => {
 onMounted(async () => {
   const orderNoParam = route.query.orderNo as string
   const payMethodParam = route.query.payMethod as string
-  
+
   if (!orderNoParam) {
     toast.error('订单编号不存在')
     loading.value = false
@@ -52,24 +52,24 @@ onMounted(async () => {
   if (payMethodParam) {
     payMethod.value = payMethodParam
   }
-  
+
   try {
     const result = await orderApi.alipayPay(orderNo.value)
     console.log('支付宝返回:', result)
-    
+
     if (typeof result === 'string' && result.includes('<form')) {
       // 清理反引号问题
       const cleanHtml = result.replace(/`/g, '"')
-      
+
       // 直接写入文档
       document.open()
       document.write(cleanHtml)
       document.close()
-      
+
       // 开始轮询支付状态
       isPaying.value = true
       pollTimer = window.setInterval(checkPayStatus, 3000)
-      
+
       return
     } else {
       toast.error('获取支付页面失败')

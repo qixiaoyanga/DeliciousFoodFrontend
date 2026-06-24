@@ -128,7 +128,9 @@ export const MERCHANT_API = {
   ORDER_MANAGE_DETAIL: (id: number) => `${API_PREFIX_MERCHANT}/order/${id}`,
   ORDER_MANAGE_ACCEPT: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/accept`,
   ORDER_MANAGE_REJECT: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/reject`,
-  ORDER_MANAGE_COMPLETE: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/complete`
+  ORDER_MANAGE_COMPLETE: (orderNo: string | number) => `${API_PREFIX_MERCHANT}/order/${orderNo}/complete`,
+
+  DASHBOARD_INFO: `${API_PREFIX_MERCHANT}/dashboard/info`
 } as const
 
 // ==================== 管理端API路径（预留） ====================

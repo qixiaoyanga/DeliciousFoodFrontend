@@ -3,7 +3,7 @@
 
 import { http } from '@/utils/request'
 import { MERCHANT_API } from './paths'
-import type { Shop, Dish } from '@/types'
+import type { Shop, Dish, DishCategory, DashboardInfo } from '@/types'
 
 // 商家端认证API（预留）
 export const merchantApi = {
@@ -140,9 +140,18 @@ export const merchantOrderApi = {
   }
 }
 
+// 商家端数据看板API
+export const merchantDashboardApi = {
+  // 获取数据看板信息
+  getInfo: () => {
+    return http.get<DashboardInfo>(MERCHANT_API.DASHBOARD_INFO)
+  }
+}
+
 export default {
   auth: merchantApi,
   shop: merchantShopApi,
   dish: merchantDishApi,
-  order: merchantOrderApi
+  order: merchantOrderApi,
+  dashboard: merchantDashboardApi
 }

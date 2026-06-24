@@ -195,3 +195,19 @@ export interface ResponseState {
   error: string | null
   data: any
 }
+
+export interface DashboardInfo {
+  totalOrders: number
+  pendingOrders: number
+  completedOrders: number
+  todayOrders: number
+  todayRevenue: number
+  weekOrders: number[]
+  weekRevenue: number[]
+  monthOrders: number[]
+  monthRevenue: number[]
+  categoryStats: { name: string; value: number }[]
+  topDishes: { name: string; sales: number; revenue: number }[]
+  shopName: string
+  shopImage: string
+}

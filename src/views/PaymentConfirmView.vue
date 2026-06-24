@@ -133,7 +133,7 @@ let hasNavigated = false
 
 const checkPayStatus = async () => {
   if (hasNavigated) return
-  
+
   try {
     const orders = await orderApi.getDetail(orderNo.value)
     if (Array.isArray(orders) && orders.length > 0) {

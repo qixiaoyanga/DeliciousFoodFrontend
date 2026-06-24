@@ -111,6 +111,12 @@ const routes: RouteRecordRaw[] = [
     meta: { showNavFooter: false }
   },
   {
+    path: '/merchant/register',
+    name: 'merchantRegister',
+    component: () => import('@/views/MerchantRegisterView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
     path: '/merchant',
     name: 'merchant',
     component: () => import('@/views/MerchantView.vue'),

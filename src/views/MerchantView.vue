@@ -1,38 +1,39 @@
-<script setup lang="ts">import { ref, onMounted, computed } from 'vue';
+<script setup lang="ts">import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { http } from '@/utils/request';
 import { MERCHANT_API } from '@/api/paths';
 import { tokenManager } from '@/utils/token';
 import { toast } from '@/utils/toast';
-import { merchantShopApi, merchantDishApi, merchantCategoryApi } from '@/api/merchant';
-import type { Shop, Dish, DishCategory, DishSpec, DishAttribute, AttributeOption } from '@/types';
+import { merchantShopApi, merchantDishApi, merchantCategoryApi, merchantDashboardApi } from '@/api/merchant';
+import type { Shop, Dish, DishCategory, DishSpec, DishAttribute, AttributeOption, DashboardInfo } from '@/types';
+import * as echarts from 'echarts';
 const router = useRouter();
 const activeTab = ref('orders');
 const isLoading = ref(false);
 const currentUser = ref(tokenManager.getUser() || { uid: '', username: '', phone: '', email: '' });
-const merchantInfo = ref<{
- name: string;
- phone: string;
- email: string;
- shopName: string;
- shopImage: string;
- totalOrders: number;
- pendingOrders: number;
- completedOrders: number;
- todayOrders: number;
- todayRevenue: number;
-}>({
- name: '',
- phone: '',
- email: '',
- shopName: '',
- shopImage: '',
+const dashboardInfo = ref<DashboardInfo>({
  totalOrders: 0,
  pendingOrders: 0,
  completedOrders: 0,
  todayOrders: 0,
- todayRevenue: 0
+ todayRevenue: 0,
+ weekOrders: [],
+ weekRevenue: [],
+ monthOrders: [],
+ monthRevenue: [],
+ categoryStats: [],
+ topDishes: [],
+ shopName: '',
+ shopImage: ''
 });
+const revenueChartRef = ref<HTMLElement | null>(null);
+const orderChartRef = ref<HTMLElement | null>(null);
+const categoryChartRef = ref<HTMLElement | null>(null);
+const topDishChartRef = ref<HTMLElement | null>(null);
+let revenueChart: echarts.ECharts | null = null;
+let orderChart: echarts.ECharts | null = null;
+let categoryChart: echarts.ECharts | null = null;
+let topDishChart: echarts.ECharts | null = null;
 const orders = ref<any[]>([]);
 const showRejectModal = ref(false);
 const rejectOrderNo = ref<string | number>('');
@@ -60,18 +61,195 @@ const getLogoUrl = (logo: string | undefined): string => {
  const logoPath = logo.startsWith('/') ? logo.slice(1) : logo;
  return `${baseUrl}/${logoPath}`;
 };
-const loadMerchantInfo = async () => {
+const loadDashboardData = async () => {
  isLoading.value = true;
  try {
- const result = await http.get<any>(MERCHANT_API.MERCHANT_INFO);
- merchantInfo.value = result;
+ const result = await merchantDashboardApi.getInfo();
+ dashboardInfo.value = result;
+ await nextTick();
+ initCharts();
+ updateCharts();
  }
  catch (error) {
- console.error('加载商家信息失败:', error);
+ console.error('加载数据看板失败:', error);
  }
  finally {
  isLoading.value = false;
  }
+};
+const initCharts = () => {
+ if (revenueChartRef.value) {
+ revenueChart = echarts.init(revenueChartRef.value);
+ }
+ if (orderChartRef.value) {
+ orderChart = echarts.init(orderChartRef.value);
+ }
+ if (categoryChartRef.value) {
+ categoryChart = echarts.init(categoryChartRef.value);
+ }
+ if (topDishChartRef.value) {
+ topDishChart = echarts.init(topDishChartRef.value);
+ }
+};
+const updateCharts = () => {
+ const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+ if (revenueChart) {
+ revenueChart.setOption({
+ tooltip: {
+ trigger: 'axis',
+ formatter: '{b}<br/>营收: ¥{c}'
+ },
+ grid: {
+ left: '3%',
+ right: '4%',
+ bottom: '3%',
+ containLabel: true
+ },
+ xAxis: {
+ type: 'category',
+ data: weekDays
+ },
+ yAxis: {
+ type: 'value',
+ axisLabel: {
+ formatter: '¥{value}'
+ }
+ },
+ series: [{
+ name: '营收',
+ type: 'line',
+ smooth: true,
+ data: dashboardInfo.value.weekRevenue,
+ areaStyle: {
+ color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+ { offset: 0, color: 'rgba(255, 107, 53, 0.3)' },
+ { offset: 1, color: 'rgba(255, 107, 53, 0.05)' }
+ ])
+ },
+ lineStyle: {
+ color: '#ff6b35',
+ width: 3
+ },
+ itemStyle: {
+ color: '#ff6b35'
+ }
+ }]
+ });
+ }
+ if (orderChart) {
+ orderChart.setOption({
+ tooltip: {
+ trigger: 'axis',
+ formatter: '{b}<br/>订单数: {c}'
+ },
+ grid: {
+ left: '3%',
+ right: '4%',
+ bottom: '3%',
+ containLabel: true
+ },
+ xAxis: {
+ type: 'category',
+ data: weekDays
+ },
+ yAxis: {
+ type: 'value'
+ },
+ series: [{
+ name: '订单数',
+ type: 'bar',
+ data: dashboardInfo.value.weekOrders,
+ itemStyle: {
+ color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+ { offset: 0, color: '#5470c6' },
+ { offset: 1, color: '#91cc75' }
+ ]),
+ borderRadius: [4, 4, 0, 0]
+ }
+ }]
+ });
+ }
+ if (categoryChart) {
+ categoryChart.setOption({
+ tooltip: {
+ trigger: 'item',
+ formatter: '{b}: {c} ({d}%)'
+ },
+ legend: {
+ orient: 'vertical',
+ right: '5%',
+ top: 'center'
+ },
+ series: [{
+ type: 'pie',
+ radius: ['40%', '70%'],
+ avoidLabelOverlap: false,
+ itemStyle: {
+ borderRadius: 10,
+ borderColor: '#fff',
+ borderWidth: 2
+ },
+ label: {
+ show: false
+ },
+ emphasis: {
+ label: {
+ show: true,
+ fontSize: 16,
+ fontWeight: 'bold'
+ }
+ },
+ labelLine: {
+ show: false
+ },
+ data: dashboardInfo.value.categoryStats
+ }]
+ });
+ }
+ if (topDishChart) {
+ const topDishData = dashboardInfo.value.topDishes.slice(0, 5);
+ topDishChart.setOption({
+ tooltip: {
+ trigger: 'axis',
+ axisPointer: {
+ type: 'shadow'
+ },
+ formatter: '{b}<br/>销量: {c}'
+ },
+ grid: {
+ left: '3%',
+ right: '4%',
+ bottom: '3%',
+ containLabel: true
+ },
+ xAxis: {
+ type: 'value'
+ },
+ yAxis: {
+ type: 'category',
+ data: topDishData.map(d => d.name),
+ inverse: true
+ },
+ series: [{
+ name: '销量',
+ type: 'bar',
+ data: topDishData.map(d => d.sales),
+ itemStyle: {
+ color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+ { offset: 0, color: '#fac858' },
+ { offset: 1, color: '#ee6666' }
+ ]),
+ borderRadius: [0, 4, 4, 0]
+ }
+ }]
+ });
+ }
+};
+const handleResize = () => {
+ revenueChart?.resize();
+ orderChart?.resize();
+ categoryChart?.resize();
+ topDishChart?.resize();
 };
 const loadOrders = async () => {
  isLoading.value = true;
@@ -126,7 +304,10 @@ const loadCategories = async () => {
 };
 const handleTabChange = (tab: string) => {
  activeTab.value = tab;
- if (tab === 'orders') {
+ if (tab === 'dashboard') {
+ loadDashboardData();
+ }
+ else if (tab === 'orders') {
  loadOrders();
  }
  else if (tab === 'shop') {
@@ -146,6 +327,7 @@ const acceptOrder = async (orderNo: string | number) => {
  if (orderIndex !== -1 && typeof result === 'number') {
  orders.value[orderIndex].pickupCode = result;
  }
+ loadOrders();
  }
  catch (error: any) {
  toast.error(error.message || '接单失败');
@@ -513,8 +695,9 @@ const submitAddCategory = async () => {
  }
 };
 onMounted(() => {
- loadMerchantInfo();
+ loadDashboardData();
  loadOrders();
+ window.addEventListener('resize', handleResize);
 });
 </script>
 
@@ -547,8 +730,8 @@ onMounted(() => {
         >
           <span class="nav-icon">📋</span>
           <span class="nav-text">订单管理</span>
-          <span v-if="merchantInfo.pendingOrders > 0" class="nav-badge">
-            {{ merchantInfo.pendingOrders }}
+          <span v-if="dashboardInfo.pendingOrders > 0" class="nav-badge">
+            {{ dashboardInfo.pendingOrders }}
           </span>
         </button>
         <button
@@ -598,30 +781,49 @@ onMounted(() => {
           <div class="stat-card">
             <div class="stat-icon orders-icon">📋</div>
             <div class="stat-info">
-              <p class="stat-value">{{ merchantInfo.totalOrders }}</p>
+              <p class="stat-value">{{ dashboardInfo.totalOrders }}</p>
               <p class="stat-label">总订单数</p>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon pending-icon">⏳</div>
             <div class="stat-info">
-              <p class="stat-value">{{ merchantInfo.pendingOrders }}</p>
+              <p class="stat-value">{{ dashboardInfo.pendingOrders }}</p>
               <p class="stat-label">待处理订单</p>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon completed-icon">✅</div>
             <div class="stat-info">
-              <p class="stat-value">{{ merchantInfo.completedOrders }}</p>
+              <p class="stat-value">{{ dashboardInfo.completedOrders }}</p>
               <p class="stat-label">已完成订单</p>
             </div>
           </div>
           <div class="stat-card">
             <div class="stat-icon revenue-icon">💰</div>
             <div class="stat-info">
-              <p class="stat-value">¥{{ merchantInfo.todayRevenue.toFixed(2) }}</p>
+              <p class="stat-value">¥{{ dashboardInfo.todayRevenue.toFixed(2) }}</p>
               <p class="stat-label">今日营收</p>
             </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3 class="chart-title">本周营收趋势</h3>
+            <div ref="revenueChartRef" class="chart-container"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">本周订单趋势</h3>
+            <div ref="orderChartRef" class="chart-container"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">分类销售占比</h3>
+            <div ref="categoryChartRef" class="chart-container"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">热销菜品TOP5</h3>
+            <div ref="topDishChartRef" class="chart-container"></div>
           </div>
         </div>
 
@@ -1592,6 +1794,32 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin: 32px 0;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+.chart-container {
+  width: 100%;
+  height: 280px;
 }
 
 .loading-container {

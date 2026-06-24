@@ -70,7 +70,7 @@ const selectedCount = computed(() => {
 })
 
 const selectedTotalPrice = computed(() => {
-  return selectedItems.value.reduce((sum, item) => sum + (item.totalPrice || item.salesPrice) * item.quantity, 0)
+  return selectedItems.value.reduce((sum, item) => sum + (item.totalPrice || item.salesPrice * item.quantity), 0)
 })
 
 const selectedDelivery = computed(() => {
@@ -256,7 +256,7 @@ const goBack = () => {
                       </span>
                     </div>
                     <div class="item-footer">
-                      <span class="item-price">¥{{ (item.totalPrice || item.salesPrice).toFixed(2) }}</span>
+                      <span class="item-price">¥{{ item.salesPrice.toFixed(2) }}</span>
                       <span class="item-quantity">x{{ item.quantity }}</span>
                     </div>
                   </div>

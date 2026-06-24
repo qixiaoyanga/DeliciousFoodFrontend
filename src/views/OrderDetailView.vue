@@ -41,7 +41,7 @@ const groupedItems = computed(() => {
 
 // 计算金额
 const totalAmount = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + (item.totalPrice || item.salesPrice) * item.quantity, 0)
+  return cartItems.value.reduce((sum, item) => sum + (item.totalPrice || item.salesPrice * item.quantity), 0)
 })
 
 const totalDeliveryFee = computed(() => {
@@ -289,7 +289,7 @@ watch(() => route.query, () => {
                   </span>
                 </div>
                 <div class="item-footer">
-                  <span class="item-price">¥{{ (item.totalPrice || item.salesPrice).toFixed(2) }}</span>
+                  <span class="item-price">¥{{ item.salesPrice.toFixed(2) }}</span>
                   <span class="item-quantity">x{{ item.quantity }}</span>
                 </div>
               </div>
