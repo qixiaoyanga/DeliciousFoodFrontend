@@ -9,7 +9,8 @@ defineProps<Props>()
 
 const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious'
 
-const formatNumber = (num: number) => {
+const formatNumber = (num: number | null) => {
+  if (num == null) return '0'
   if (num >= 10000) {
     return (num / 10000).toFixed(1) + '万'
   }
@@ -34,7 +35,7 @@ const goToShop = (id: number) => {
       <img :src="getImageUrl(shop.logo)" :alt="shop.name" class="shop-image" />
       <div class="shop-badges">
         <span class="badge badge-free" v-if="shop.delivery === 0">免配送费</span>
-        <span class="badge badge-high" v-if="shop.grade >= 4.5">高分店铺</span>
+        <span class="badge badge-high" v-if="shop.grade != null && shop.grade >= 4.5">高分店铺</span>
       </div>
       <div class="shop-closed" v-if="shop.businessHours">
         <span class="closed-icon">⏰</span>
@@ -48,7 +49,7 @@ const goToShop = (id: number) => {
       <div class="shop-rating">
         <div class="rating-container">
           <span class="rating-star">⭐</span>
-          <span class="rating-score">{{ shop.grade.toFixed(1) }}</span>
+          <span class="rating-score">{{ shop.grade != null ? shop.grade.toFixed(1) : '暂无评分' }}</span>
         </div>
         <span class="sales">月售 {{ formatNumber(shop.monthlySales) }}</span>
       </div>
@@ -56,11 +57,11 @@ const goToShop = (id: number) => {
       <div class="shop-meta">
         <div class="meta-item">
           <span class="meta-icon">🚚</span>
-          <span class="meta-text">配送 ¥{{ shop.delivery.toFixed(2) }}</span>
+          <span class="meta-text">配送 ¥{{ shop.delivery != null ? shop.delivery.toFixed(2) : '0.00' }}</span>
         </div>
         <div class="meta-item">
           <span class="meta-icon">💰</span>
-          <span class="meta-text">起送 ¥{{ shop.minOrderAmount.toFixed(2) }}</span>
+          <span class="meta-text">起送 ¥{{ shop.minOrderAmount != null ? shop.minOrderAmount.toFixed(2) : '0.00' }}</span>
         </div>
       </div>
 

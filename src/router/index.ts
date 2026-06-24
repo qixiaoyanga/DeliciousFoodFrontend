@@ -121,6 +121,18 @@ const routes: RouteRecordRaw[] = [
     name: 'merchant',
     component: () => import('@/views/MerchantView.vue'),
     meta: { showNavFooter: false }
+  },
+  {
+    path: '/admin/login',
+    name: 'adminLogin',
+    component: () => import('@/views/AdminLoginView.vue'),
+    meta: { showNavFooter: false }
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('@/views/AdminView.vue'),
+    meta: { showNavFooter: false }
   }
 ]
 

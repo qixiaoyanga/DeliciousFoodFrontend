@@ -5,7 +5,7 @@ import { toast } from './toast'
 import { CUSTOMER_API, MERCHANT_API } from '@/api/paths'
 import type { User } from '@/types'
 
-export type UserType = 'customer' | 'merchant'
+export type UserType = 'customer' | 'merchant' | 'admin'
 
 // Token状态
 interface TokenState {
@@ -32,6 +32,7 @@ const publishTokenRefresh = (token: string) => {
 }
 
 const MERCHANT_TOKEN_KEY = 'delicious_merchant_token'
+const ADMIN_TOKEN_KEY = 'delicious_admin_token'
 
 // Token管理类
 class TokenManager {
@@ -64,6 +65,15 @@ class TokenManager {
           userType
         }
         localStorage.setItem(MERCHANT_TOKEN_KEY, JSON.stringify(merchantData))
+      } else if (userType === 'admin') {
+        const adminData = {
+          accessToken,
+          user,
+          refreshToken,
+          expireTime,
+          userType
+        }
+        localStorage.setItem(ADMIN_TOKEN_KEY, JSON.stringify(adminData))
       }
     }
   }
@@ -133,6 +143,25 @@ class TokenManager {
     return Date.now() >= this.expireTime - 5 * 60 * 1000
   }
 
+  // 从localStorage加载管理员token
+  loadAdminToken(): boolean {
+    try {
+      const data = localStorage.getItem(ADMIN_TOKEN_KEY)
+      if (data) {
+        const parsed = JSON.parse(data)
+        this.accessToken = parsed.accessToken || null
+        this.user = parsed.user || null
+        this.refreshToken = parsed.refreshToken || null
+        this.expireTime = parsed.expireTime || null
+        this.userType = parsed.userType || 'admin'
+        return true
+      }
+    } catch {
+      localStorage.removeItem(ADMIN_TOKEN_KEY)
+    }
+    return false
+  }
+
   // 清除Token（内存）- HttpOnly Cookie由后端在logout时清除
   clearTokens() {
     this.accessToken = null
@@ -141,6 +170,7 @@ class TokenManager {
     this.user = null
     this.userType = null
     localStorage.removeItem(MERCHANT_TOKEN_KEY)
+    localStorage.removeItem(ADMIN_TOKEN_KEY)
   }
 
   // 刷新Token（显示错误信息）
@@ -250,9 +280,15 @@ export const autoLogin = async (): Promise<boolean> => {
   const isLoginPage = pathname === '/login'
   const isMerchantLoginPage = pathname === '/merchant/login'
   const isMerchantPage = pathname.startsWith('/merchant') && !isMerchantLoginPage
+  const isAdminLoginPage = pathname === '/admin/login'
+  const isAdminPage = pathname.startsWith('/admin') && !isAdminLoginPage
 
   if (tokenManager.getAccessToken() && !tokenManager.isTokenExpired()) {
     return true
+  }
+
+  if (isAdminPage) {
+    return tokenManager.loadAdminToken()
   }
 
   if (isMerchantPage) {

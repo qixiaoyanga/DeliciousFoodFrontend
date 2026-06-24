@@ -138,19 +138,24 @@ export const MERCHANT_API = {
 export const ADMIN_API = {
   // 认证
   ADMIN_LOGIN: `${API_PREFIX_ADMIN}/login`,
+  ADMIN_LOGOUT: `${API_PREFIX_ADMIN}/logout`,
 
-  // 店铺管理
-  SHOP_ADMIN_LIST: `${API_PREFIX_ADMIN}/shop/list`,
-  SHOP_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}`,
-  SHOP_ADMIN_STATUS: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}/status`,
+  // 数据看板
+  ADMIN_DASHBOARD: `${API_PREFIX_ADMIN}/dashboard`,
 
   // 用户管理
   USER_ADMIN_LIST: `${API_PREFIX_ADMIN}/user/list`,
-  USER_ADMIN_STATUS: (id: number) => `${API_PREFIX_ADMIN}/user/${id}/status`,
+  USER_ADMIN_STATUS: `${API_PREFIX_ADMIN}/user/status`,
 
-  // 订单管理
-  ORDER_ADMIN_LIST: `${API_PREFIX_ADMIN}/order/list`,
-  ORDER_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/order/${id}`
+  // 商家管理
+  SHOP_ADMIN_LIST: `${API_PREFIX_ADMIN}/shop/list`,
+  SHOP_ADMIN_DETAIL: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}`,
+  SHOP_ADMIN_AUDIT: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}/audit`,
+  SHOP_ADMIN_STATUS: (id: number) => `${API_PREFIX_ADMIN}/shop/${id}/status`,
+
+  // 骑手管理
+  DELIVERY_ADMIN_LIST: `${API_PREFIX_ADMIN}/delivery/list`,
+  DELIVERY_ADMIN_STATUS: (id: string | number) => `${API_PREFIX_ADMIN}/delivery/${id}/status`
 } as const
 
 export default {

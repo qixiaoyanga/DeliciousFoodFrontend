@@ -211,3 +211,81 @@ export interface DashboardInfo {
   shopName: string
   shopImage: string
 }
+
+// ==================== 管理端类型 ====================
+
+export interface AdminUser {
+  uid: string
+  username: string
+  phone: string
+  email: string
+  image: string | null
+  gender: number
+  realName: string | null
+  memberLevel: number
+  balance: number
+  status: number
+  registerTime: string
+  lastLoginTime: string | null
+}
+
+export interface AdminShop {
+  id: number
+  name: string
+  logo: string
+  description: string
+  ownerName: string
+  ownerPhone: string
+  auditStatus: number
+  rejectReason: string | null
+  status: number
+  shopStatus: number
+  province: string
+  city: string
+  district: string
+  address: string
+  grade: number
+  monthlySales: number
+  createTime: string
+}
+
+export interface AdminDelivery {
+  id: string
+  realName: string
+  phone: string
+  email: string
+  idCard: string
+  balance: number
+  status: number
+  registerTime: string
+  lastLoginTime: string | null
+}
+
+export interface AdminDashboard {
+  totalUsers: number
+  totalMerchants: number
+  totalOrders: number
+  totalRevenue: number
+  todayNewUsers: number
+  todayNewOrders: number
+  pendingAuditShops: number
+  userGrowth: number[]
+  orderTrend: number[]
+  weekLabels: string[]
+}
+
+export interface AdminLoginInfo {
+  accessToken: string
+  id: number
+  username: string
+  role: number
+  phone: string
+}
+
+export interface PageVO<T> {
+  records: T[]
+  total: number
+  pages: number
+  current: number
+  size: number
+}

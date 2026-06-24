@@ -49,6 +49,7 @@ const shopInfo = ref<Shop>({
  grade: 0,
  monthlySales: 0
 });
+const shopExists = ref(true);
 const dishes = ref<Dish[]>([]);
 const SERVER_BASE_URL = import.meta.env.VITE_SERVER_BASE_URL || 'http://localhost:8080/delicious';
 const getLogoUrl = (logo: string | undefined): string => {
@@ -269,10 +270,16 @@ const loadShopInfo = async () => {
  isLoading.value = true;
  try {
  const result = await http.get<any>(MERCHANT_API.SHOP_MANAGE_INFO);
+ if (result.shop === null) {
+ shopExists.value = false;
+ } else {
+ shopExists.value = true;
  shopInfo.value = result.shop || result;
+ }
  }
  catch (error) {
  console.error('加载店铺信息失败:', error);
+ shopExists.value = false;
  }
  finally {
  isLoading.value = false;
@@ -413,6 +420,20 @@ const getAuditStatusClass = (status: number) => {
  3: 'audit-rejected'
  };
  return map[status] || 'audit-not-submitted';
+};
+const getShopStatusText = (status: number) => {
+ const map: Record<number, string> = {
+ 0: '正常营业',
+ 1: '店铺封禁'
+ };
+ return map[status] || '未知';
+};
+const getShopStatusClass = (status: number) => {
+ const map: Record<number, string> = {
+ 0: 'shop-status-normal',
+ 1: 'shop-status-banned'
+ };
+ return map[status] || 'shop-status-normal';
 };
 const logout = () => {
  tokenManager.clearTokens();
@@ -942,14 +963,161 @@ onMounted(() => {
       <div v-else-if="activeTab === 'shop'" class="content-area">
         <div class="section-header">
           <h3 class="section-title">店铺管理</h3>
-          <span class="audit-badge" :class="getAuditStatusClass(shopInfo.auditStatus ?? 0)">
-            {{ getAuditStatusText(shopInfo.auditStatus ?? 0) }}
-          </span>
+          <div v-if="shopExists" class="status-badges">
+            <span class="audit-badge" :class="getAuditStatusClass(shopInfo.auditStatus ?? 0)">
+              {{ getAuditStatusText(shopInfo.auditStatus ?? 0) }}
+            </span>
+            <span class="audit-badge" :class="getShopStatusClass(shopInfo.shopStatus ?? 0)">
+              {{ getShopStatusText(shopInfo.shopStatus ?? 0) }}
+            </span>
+          </div>
         </div>
 
         <div v-if="isLoading" class="loading-container">
           <div class="loading-spinner"></div>
           <p>加载中...</p>
+        </div>
+
+        <!-- shop为null时：显示注册表单 -->
+        <div v-else-if="!shopExists" class="shop-form">
+          <div class="form-section">
+            <h4 class="form-section-title">基本信息</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>店铺名称 *</label>
+                <input v-model="shopInfo.name" type="text" class="form-input" placeholder="请输入店铺名称" />
+              </div>
+              <div class="form-group">
+                <label>店铺图片</label>
+                <div class="image-upload">
+                  <img :src="getLogoUrl(shopInfo.logo)" alt="店铺图片" class="preview-image" />
+                  <label class="upload-btn">
+                    <span>上传图片</span>
+                    <input type="file" accept="image/*" class="hidden-input" @change="(e) => uploadImage(e, 'logo')" />
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label>店铺描述</label>
+                <textarea v-model="shopInfo.description" class="form-input" placeholder="请输入店铺描述"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">配送设置</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>配送费（元）</label>
+                <input v-model.number="shopInfo.delivery" type="number" step="0.01" class="form-input" placeholder="请输入配送费" />
+              </div>
+              <div class="form-group">
+                <label>起送价（元）</label>
+                <input v-model.number="shopInfo.minOrderAmount" type="number" step="0.01" class="form-input" placeholder="请输入起送价" />
+              </div>
+              <div class="form-group">
+                <label>配送范围（米）</label>
+                <input v-model.number="shopInfo.radius" type="number" class="form-input" placeholder="请输入配送范围" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">营业信息</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>营业时间</label>
+                <input v-model="shopInfo.businessHours" type="text" class="form-input" placeholder="如：09:00-22:00" />
+              </div>
+              <div class="form-group">
+                <label>营业状态</label>
+                <select v-model.number="shopInfo.status" class="form-input">
+                  <option :value="1">营业中</option>
+                  <option :value="0">休息中</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">店铺地址</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>省份</label>
+                <input v-model="shopInfo.province" type="text" class="form-input" placeholder="请输入省份" />
+              </div>
+              <div class="form-group">
+                <label>城市</label>
+                <input v-model="shopInfo.city" type="text" class="form-input" placeholder="请输入城市" />
+              </div>
+              <div class="form-group">
+                <label>区县</label>
+                <input v-model="shopInfo.district" type="text" class="form-input" placeholder="请输入区县" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label>详细地址</label>
+                <input v-model="shopInfo.address" type="text" class="form-input" placeholder="请输入详细地址" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">资质信息</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>营业执照</label>
+                <div class="image-upload">
+                  <img :src="getLogoUrl(shopInfo.businessLicense)" alt="营业执照" class="preview-image" />
+                  <label class="upload-btn">
+                    <span>上传</span>
+                    <input type="file" accept="image/*" class="hidden-input" @change="(e) => uploadImage(e, 'businessLicense')" />
+                  </label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>食品许可证</label>
+                <div class="image-upload">
+                  <img :src="getLogoUrl(shopInfo.foodLicense)" alt="食品许可证" class="preview-image" />
+                  <label class="upload-btn">
+                    <span>上传</span>
+                    <input type="file" accept="image/*" class="hidden-input" @change="(e) => uploadImage(e, 'foodLicense')" />
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>法人姓名</label>
+                <input v-model="shopInfo.legalPersonName" type="text" class="form-input" placeholder="请输入法人姓名" />
+              </div>
+              <div class="form-group">
+                <label>法人身份证</label>
+                <input v-model="shopInfo.legalPersonIdCard" type="text" class="form-input" placeholder="请输入法人身份证号" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" @click="submitForAudit">提交审核</button>
+          </div>
+        </div>
+
+        <!-- 店铺封禁状态 -->
+        <div v-else-if="shopInfo.shopStatus === 1" class="audit-status-container">
+          <div class="audit-status-card banned">
+            <div class="audit-icon">🔒</div>
+            <h3 class="audit-title">店铺已被封禁</h3>
+            <p class="audit-desc">您的店铺因违规操作已被平台封禁，暂时无法营业</p>
+            <div class="reject-reason-box">
+              <span class="reason-label">封禁原因：</span>
+              <span class="reason-content">{{ shopInfo.rejectReason || '平台审核认定违规' }}</span>
+            </div>
+            <p class="audit-desc">如需解封，请联系平台客服</p>
+          </div>
         </div>
 
         <!-- 未提交状态：只显示注册店铺 -->
@@ -2215,6 +2383,30 @@ onMounted(() => {
 .audit-not-submitted {
   background: rgba(149, 165, 166, 0.1);
   color: #95a5a6;
+}
+
+.shop-status-normal {
+  background: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+}
+
+.shop-status-banned {
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+}
+
+.status-badges {
+  display: flex;
+  gap: 12px;
+}
+
+.audit-status-card.banned {
+  border: 2px solid rgba(231, 76, 60, 0.5);
+  background: rgba(231, 76, 60, 0.05);
+}
+
+.audit-status-card.banned .audit-icon {
+  animation: none;
 }
 
 .audit-status-container {
