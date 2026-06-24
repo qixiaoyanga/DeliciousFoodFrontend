@@ -60,6 +60,10 @@ const initCharts = () => {
 }
 
 const updateCharts = () => {
+  // 确保 echarts 已初始化
+  if (!userGrowthChart || !orderTrendChart) {
+    initCharts()
+  }
   if (userGrowthChart) {
     userGrowthChart.setOption({
       tooltip: { trigger: 'axis' },
